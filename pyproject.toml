@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "bloomlib"
+version = "0.0.0"
+description = ""
+authors = ["Mike Huls <mikehuls42@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.1.14"
+pytest = "^7.4.4"
+pytest-cov = "^4.1.0"
+rich = "^13.7.0"
+
+[build-system]
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "bloomlib"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
