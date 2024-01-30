@@ -88,30 +88,14 @@ impl BloomFilter {
         let py_long_biglen = bitlen.extract::<Py<PyLong>>(py)?;
         Ok(py_long_biglen)
     }
+
+    pub fn estimate_false_positive_rate(&self) -> f64 {
+        self.bloomfilter.estimate_false_positive_rate()
+    }
+
 }
 
 
-
-#[pyfunction]
-/// Estimates the false positive rate.
-///
-/// # Arguments
-///
-/// * `n_hashes` - The number of hash functions used.
-/// * `n_bits` - The number of bits in the filter.
-/// * `expected_n_of_items` - The expected number of items to be inserted.
-///
-/// # Example
-/// ```
-/// let rate = estimate_false_positive_rate(3, 1000, 300);
-/// ```
-pub fn estimate_false_positive_rate(n_hashes:usize, n_bits:usize, expected_n_of_items:usize) -> usize {
-    let n_hashes_f64 = n_hashes as f64;
-    let n_bits_f64 = n_bits as f64;
-    let expected_n_of_items_f64 = expected_n_of_items as f64;
-
-    (1.0 - f64::exp(-n_hashes_f64 * expected_n_of_items_f64 / n_bits_f64)).powf(n_hashes_f64) as usize
-}
 
 
 /// Hashes Python Objects. Returns Bytes
@@ -178,6 +162,6 @@ fn hash_pyobject(py: Python, obj: &PyObject, output: &mut Vec<u8>) -> PyResult<(
 #[pymodule]
 fn bloomlib(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<BloomFilter>()?;
-    m.add_function(wrap_pyfunction!(estimate_false_positive_rate, m)?)?;
+//     m.add_function(wrap_pyfunction!(estimate_false_positive_rate, m)?)?;
     Ok(())
 }

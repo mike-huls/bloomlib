@@ -69,6 +69,8 @@ pub struct _BloomFilter {
     bitvec: Vec<u8>,    // todo rename to vector_of_bytes? upgrade to array if possible?
     /// The number of time an item should be hashed with different types of hash functions or seeds
     hashes: usize,      // todo rename to hash_functions (isnt this always a small, positive integer?)
+    /// The expected number of items this Bloom Filter should hold
+    expected_n_items:usize,
 }
 
 impl _BloomFilter {
@@ -79,7 +81,8 @@ impl _BloomFilter {
 
         _BloomFilter {
             bitvec: vec![0; num_of_bits],
-            hashes: num_of_hashes
+            hashes: num_of_hashes,
+            expected_n_items: expected_number_of_items
         }
     }
 
@@ -143,6 +146,27 @@ impl _BloomFilter {
 
         return self.contains_bytes(&serialized_value);
     }
+
+    /// Estimates the false positive rate.
+    ///
+    /// # Arguments
+    ///
+    /// * `n_hashes` - The number of hash functions used.
+    /// * `n_bits` - The number of bits in the filter.
+    /// * `expected_n_of_items` - The expected number of items to be inserted.
+    ///
+    /// # Example
+    /// ```
+    /// let rate = estimate_false_positive_rate(3, 1000, 300);
+    /// ```
+    pub fn estimate_false_positive_rate(&self) -> f64 {
+        let n_hashes_f64 = self.hashes as f64;
+        let n_bits_f64 = self.bitvec.len() as f64;
+        let expected_n_of_items_f64 = self.expected_n_items as f64;
+
+        (1.0 - f64::exp(-n_hashes_f64 * expected_n_of_items_f64 / n_bits_f64)).powf(n_hashes_f64)
+    }
+
 
 
 }
@@ -231,7 +255,18 @@ mod tests_insert_and_get {
             "Too many false positives: {}, expected at most {}", false_positives, expected_false_positives
         );
     }
-    //
+
+    #[test]
+    fn test_estimate_false_positive_rate() {
+        let n = 1000; // Number of items to insert
+        let p = 0.01; // Desired false positive probability
+        let mut bloom_filter = _BloomFilter::new(n, p);
+
+        println!("test: {}", bloom_filter.estimate_false_positive_rate());
+
+        assert!(bloom_filter.estimate_false_positive_rate() == 0, "Estimated false positive rate cannot be 0");
+    }
+
     #[test]
     fn test_serialization() {
         let mut bloom_filter = _BloomFilter::new(100, 0.01);

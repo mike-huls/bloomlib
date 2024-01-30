@@ -3,13 +3,9 @@ import time
 import timeit
 from typing import List
 
-import bloomlib
-print(dir(bloomlib))
-print(help(bloomlib))
-
 from bloomlib import BloomFilter
-from bloomset_rs.test.utils.timing import display_times, Timing, performance_check
-from bloomset_rs.test.utils.utils_for_testing import random_str
+from test.utils.timing import display_times, Timing, performance_check
+from test.utils.utils_for_testing import random_str
 
 LANGUAGE = "RUST"
 

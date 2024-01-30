@@ -1,18 +1,18 @@
 [tool.poetry]
 name = "bloomlib"
 version = "0.0.0"
-description = ""
+description = "Library that offers all types of Bloom filters, implemented in Rust"
 authors = ["Mike Huls <mikehuls42@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
-[tool.poetry.dependencies]
-python = "^3.9"
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.1.14"
-pytest = "^7.4.4"
-pytest-cov = "^4.1.0"
-rich = "^13.7.0"
+#[tool.poetry.dependencies]
+#python = "^3.9"
+#[tool.poetry.group.dev.dependencies]
+#ruff = "^0.1.14"
+#pytest = "^7.4.4"
+#pytest-cov = "^4.1.0"
+#rich = "^13.7.0"
 
 [build-system]
 requires = ["maturin>=1.4,<2.0"]
@@ -20,7 +20,7 @@ build-backend = "maturin"
 
 [project]
 name = "bloomlib"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -30,3 +30,6 @@ dynamic = ["version"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
+
+# Optional: if you want to build a source distribution as well
+sdist = true

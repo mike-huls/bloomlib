@@ -1,7 +1,7 @@
 import dataclasses
 import datetime
 
-from bloomlib import BloomFilter, estimate_false_positive_rate
+from bloomlib import BloomFilter
 from test.utils.utils_for_testing import random_str, Timer
 
 
@@ -19,13 +19,10 @@ from test.utils.utils_for_testing import random_str, Timer
 
 # todo check
 def test_calculate_estimated_fp_rate():
-    # bloom = BloomFilter(expected_number_of_items=1, desired_false_positive_rate=0.05)
-    # estimated_fp_rate:float = estimate_false_positive_rate(n_hashes=5, mem_size=80_000, n_items=10_000)
-    estimated_fp_rate = estimate_false_positive_rate(50_000, 80_000, 10_000)
-    print('----', estimated_fp_rate)
-    assert estimated_fp_rate != 0
-
-    assert abs(estimated_fp_rate - 0.0216) < 0.01 # should be around 0.0216
+    desired_fp_rate = 0.05
+    bloom = BloomFilter(expected_number_of_items=10_000, desired_false_positive_rate=0.05)
+    assert bloom.estimate_false_positive_rate() > 0
+    assert abs(bloom.estimate_false_positive_rate() - desired_fp_rate) < 0.01   # within 1%
 
 def test_one_thing():
 
@@ -77,7 +74,7 @@ def test_false_positive_rate():
     with Timer("checking false positives"):
         false_positives = sum(bloom.contains(random_str(15)) for _ in range(elem_count))
 
-    fpr_estimated = estimate_false_positive_rate(bloom.get_number_of_hashes(), bloom.get_number_of_bits(), elem_count)
+    fpr_estimated = bloom.estimate_false_positive_rate()
     print(f"False positive estimate: {fpr_estimated * 100:.05f}%")
 
 

@@ -1,7 +1,6 @@
 /target
 /Cargo.lock
-../venvv/
+venvv/
 venv/
 temp/
 target/
-.pypirc

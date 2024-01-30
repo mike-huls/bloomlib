@@ -1,5 +1,7 @@
 from typing import List, Any
 
+
+
 class BloomFilter:
     """
     A class representing a bloom filter that you can use as a set
@@ -37,4 +39,9 @@ class BloomFilter:
         """
         Memory size
         :return: int representing the number of bits that the Bloom filter's memory uses
+        """
+    def estimate_false_positive_rate(self) -> float:
+        """
+        Estimates the False Positive rate
+        :return: float representing the estimated false positive rate (between 0 and 1)
         """
