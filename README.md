@@ -18,8 +18,6 @@ _  /_/ /_  /  / /_/ // /_/ /_  / / / / /_  /  _  /  _  /_/ /
 | Package | [![PyPI Latest Release](https://img.shields.io/pypi/v/bloomlib.svg)](https://pypi.org/project/bloomlib/) [![PyPI Downloads](https://img.shields.io/pypi/dm/bloomlib.svg?label=PyPI%20downloads)](https://pypi.org/project/bloomlib/) |
 | Meta    | ![GitHub License](https://img.shields.io/github/license/mike-huls/bloomlib)                                                                                                                                                          |
 
-## What is it?
-
 **bloomlib** is a Python package that provides superfast Bloom filters, designed to 
 optimize your applications in an easy and intuitive way.
 It aims to be the go-to package to build and use Bloom Filters that make your applications 
@@ -32,7 +30,7 @@ superfast, memory-efficient and user-friendly.
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Documentation](#documentation)
-- [Contributing to bloomlib](#contributing-to-pandas)
+- [Contributing to bloomlib](#contributing-to-bloomlib)
 
 ## Main Features
 - 🦀 Built in Rust
