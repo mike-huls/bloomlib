@@ -1,6 +1,6 @@
 //! Python bindings for the Rust BloomFilter
 
-use pyo3::prelude::{pyclass, pyfunction, pymethods, pymodule, PyModule};
+use pyo3::prelude::{pyclass, pymethods, pymodule, PyModule};
 use pyo3::{PyObject, PyResult, Python};
 use pyo3::types::{
     PyString, PyInt, PyFloat, PyDate, PyDateTime, PyDict, PyList, PyTuple, PySet, PyTime,
@@ -160,7 +160,7 @@ fn hash_pyobject(py: Python, obj: &PyObject, output: &mut Vec<u8>) -> PyResult<(
 
 /// Create the Python module
 #[pymodule]
-fn bloomlib(py: Python, m: &PyModule) -> PyResult<()> {
+fn bloomlib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<BloomFilter>()?;
 //     m.add_function(wrap_pyfunction!(estimate_false_positive_rate, m)?)?;
     Ok(())
