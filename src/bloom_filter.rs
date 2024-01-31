@@ -6,6 +6,7 @@ use serde::{Serialize, Deserialize};
 use std::f64::consts::LN_2;
 use std::hash::{Hash};
 use murmur3;
+use crate::serialization;
 
 ///
 ///- m     number of bits
@@ -101,19 +102,16 @@ impl BloomFilterRS {
     // pub fn add<T: Serialize + Hash>(&mut self, value: &T) {
     // pub fn add_bulk<T: Serialize + Hash>(&mut self, values: Vec<PyObject>) {
     /// Adds items in bulk
-    pub fn add_bulk<T: Serialize + Hash>(&mut self, values: Vec<&T>) {
-        for value in values.iter() {
-            let serialized_value = serde_json::to_vec(value).expect("Failed to serialize value");
-            // let serialized_value = bincode::serialize(value)?;
-            self.add_bytes(&serialized_value);
+    pub fn add_bulk<T: Serialize + Hash>(&mut self, items: Vec<&T>) {
+        for item in items.iter() {
+            self.add(item);
         }
     }
 
     /// Adds an item to the BloomFilter
-    pub fn add<T: Serialize + Hash>(&mut self, value: &T) -> Result<(), Box<dyn std::error::Error>> {
-        let serialized_value = serde_json::to_vec(value).expect("Failed to serialize value");
-        // let serialized_value = bincode::serialize(value)?;
-        self.add_bytes(&serialized_value);
+    pub fn add<T: Serialize + Hash>(&mut self, item: &T) -> Result<(), Box<dyn std::error::Error>> {
+        let serialized_item = serialization::serialize(item);
+        self.add_bytes(&serialized_item);
         Ok(())
     }
 
@@ -140,10 +138,10 @@ impl BloomFilterRS {
 
     }
     /// Check is a biven item may be contained in the BLoomFilter
-    pub fn contains<T: Serialize>(&self, value: &T) -> bool {
-        let serialized_value = serde_json::to_vec(value).expect("Failed to serialize value");
+    pub fn contains<T: Serialize>(&self, item: &T) -> bool {
+        let serialized_item = serialization::serialize(item);
 
-        return self.contains_bytes(&serialized_value);
+        return self.contains_bytes(&serialized_item);
     }
 
     /// Estimates the false positive rate.

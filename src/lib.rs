@@ -12,8 +12,7 @@ use pyo3::prelude::*;
 use crate::bloom_filter::BloomFilterRS;  // For Python, PyResult
 
 mod bloom_filter;
-
-
+mod serialization;
 
 
 // Standard Bloom Filter
