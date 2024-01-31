@@ -42,17 +42,6 @@ impl BloomFilter {
         self.bloomfilter.add_bytes(&py_bytes);
 
         Ok(())
-
-        // old way
-        // // Call Python's `__hash__` function to get a hash value todo this should be optimized
-        // let hash_val: i64 = value.call_method0(py, "__hash__")?.extract(py)?;
-        //
-        // // Convert the i64 hash value to bytes
-        // let py_bytes = hash_val.to_ne_bytes();
-        //
-
-        // self.bs.add_bytes(&py_bytes);
-        // Ok(())
     }
     pub fn add_bulk(&mut self, py: Python, items: Vec<PyObject>) -> PyResult<()> {
         for item in items.iter() {

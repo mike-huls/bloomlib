@@ -26,6 +26,7 @@ superfast, memory-efficient and user-friendly.
 ## Table of Contents
 
 - [Main Features](#main-features)
+- [Usage Example](#usage-example)
 - [Installation](#installation)
 - [Dependencies](#dependencies)
 - [License](#license)
@@ -36,6 +37,25 @@ superfast, memory-efficient and user-friendly.
 - 🦀 Built in Rust
 - ⚡ Highly optimized for speed and memory-efficiency
 - 👨‍🎨 User-friendly
+
+## Usage Example
+```python
+from bloomlib import BloomFilter
+
+# 1. Create the filter
+bf = BloomFilter(expected_number_of_items=1_000, desired_false_positive_rate=0.05)
+
+# 2. Add items
+for i in range(100):
+    bf.add(value=i)
+
+# 3. Check if an item is contained; False means definitely not, True means "maybe" 
+if (bf.contains(item=42)):
+    print("This item may be in filter")
+else:
+    print("This item is definitely not in the filter")
+```
+
 
 ## Installation
 The source code is currently hosted on GitHub at:
