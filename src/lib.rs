@@ -1,350 +1,168 @@
-//! BloomFilter implementation in Rust
+//! Python bindings for the Rust BloomFilter
 
-mod py_wrappers;
-use std::io::Cursor;
+use pyo3::prelude::{pyclass, pymethods, pymodule, PyModule};
+use pyo3::{PyObject, PyResult, Python};
+use pyo3::types::{
+    PyString, PyInt, PyFloat, PyDate, PyDateTime, PyDict, PyList, PyTuple, PySet, PyTime,
+    PyBool, PyLong, PyFunction
+};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use pyo3::prelude::*;
+use crate::bloom_filter::BloomFilterRS;  // For Python, PyResult
 
-use serde::{Serialize, Deserialize};
-use std::f64::consts::LN_2;
-use std::hash::{Hash};
-use murmur3;
+mod bloom_filter;
 
-///
-///- m     number of bits
-///- n     estimated number of elements (to be) inserted
-///- p     desired false positive rate
-///- k     number of hash functions
-///
 
-/// Calculates optimal number of bits to use for the bloom filter
-/// This is calculated by `m = -(n * ln(p)) / ln(2)^2)`
-///     - m     optimal number of bits          (integer)
-///     - n     (estimated) number of items     (integer)
-///     - p     desired false positive rate     (float 0..1)
-///
-/// # Arguments
-/// * `expected_number_of_items` - Estimated number of items that the BloomFilter should accommodate
-/// * `desired_false_pos_rate` - Desired/accepted false positive rate
-///
-/// # Examples
-/// ```
-/// // You can have rust code between fences inside the comments
-/// // If you pass --test to `rustdoc`, it will even test it for you!
-/// // use doc::Person;
-/// //let person = Person::new("name");
-/// ```
-pub fn calc_optimal_number_of_bits(expected_number_of_items: usize, desired_false_pos_rate:f64) -> usize {
-    let num = -1.0_f64 * expected_number_of_items as f64 * desired_false_pos_rate.ln();
-    let denominator = 2.0_f64.ln().powf(2.0);
-    (num / denominator).ceil() as usize
+
+
+// Standard Bloom Filter
+#[pyclass]
+struct BloomFilter {
+    bloomfilter: BloomFilterRS
 }
 
-
-/// Calculates optimal number of hashes for the bloom filter
-/// This is calculated by `k = (m / n ) * ln2`
-///     - m     optimal number of bits          (integer)
-///     - n     (estimated) number of items     (integer)
-///     - p     desired false positive rate     (float 0..1)
-///
-/// # Arguments
-/// * `expected_number_of_items` - Estimated number of items that the BloomFilter should accomodate
-/// * `bit_array_size` - Number of bits reserved for the BloomFilter
-///
-/// # Examples
-/// ```
-/// // You can have rust code between fences inside the comments
-/// // If you pass --test to `rustdoc`, it will even test it for you!
-/// use doc::Person;
-/// let person = Person::new("name");
-/// ```
-pub fn calculate_optimal_number_of_hashes(bit_array_size:usize, expected_number_of_items:usize ) -> usize {
-    ((bit_array_size as f64 / expected_number_of_items as f64) * LN_2).ceil() as usize
-}
-
-
-
-/// A struct representing a BloomFilter
-#[derive(Serialize, Deserialize)]
-pub struct _BloomFilter {
-    /// Memory size; number of bits
-    bitvec: Vec<u8>,    // todo rename to vector_of_bytes? upgrade to array if possible?
-    /// The number of time an item should be hashed with different types of hash functions or seeds
-    hashes: usize,      // todo rename to hash_functions (isnt this always a small, positive integer?)
-    /// The expected number of items this Bloom Filter should hold
-    expected_n_items:usize,
-}
-
-impl _BloomFilter {
+#[pymethods]
+impl BloomFilter {
+    #[new]
     pub fn new(expected_number_of_items: usize, desired_false_positive_rate: f64) -> Self {
-        // todo fp_rate to f64 or smaller?
-        let num_of_bits = calc_optimal_number_of_bits(expected_number_of_items, desired_false_positive_rate);
-        let num_of_hashes = calculate_optimal_number_of_hashes(num_of_bits, expected_number_of_items);
-
-        _BloomFilter {
-            bitvec: vec![0; num_of_bits],
-            hashes: num_of_hashes,
-            expected_n_items: expected_number_of_items
+        BloomFilter {
+            bloomfilter: BloomFilterRS::new(expected_number_of_items, desired_false_positive_rate),
         }
     }
 
-    pub fn add_bytes(&mut self, hash_bytes: &[u8]) {
-        for i in 0..self.hashes {
-            // let hash_value = fasthash::murmur3::hash32_with_seed(hash_bytes, i as u32);
-            let mut reader = Cursor::new(hash_bytes);
-            let hash_value = murmur3::murmur3_32(&mut reader, i as u32).unwrap();
+    pub fn add(&mut self, py: Python, item: PyObject) -> PyResult<()> {
 
-            let index = hash_value % (self.bitvec.len() as u32 * 8);  // Total number of bits
-            let byte_pos = (index / 8) as usize;  // Position of the byte in the vector
-            let bit_pos = index % 8;             // Position of the bit in the byte
-            self.bitvec[byte_pos] |= 1 << bit_pos;
-        }
+        // Create a mutable Vec<u8> to store the hash bytes
+        let mut py_bytes: Vec<u8> = Vec::new();
+
+        // Populate the hash bytes vector
+        hash_pyobject(py, &item, &mut py_bytes)?;
+
+        // Use the hash bytes to update the BloomSet
+        self.bloomfilter.add_bytes(&py_bytes);
+
+        Ok(())
+
+        // old way
+        // // Call Python's `__hash__` function to get a hash value todo this should be optimized
+        // let hash_val: i64 = value.call_method0(py, "__hash__")?.extract(py)?;
+        //
+        // // Convert the i64 hash value to bytes
+        // let py_bytes = hash_val.to_ne_bytes();
+        //
+
+        // self.bs.add_bytes(&py_bytes);
+        // Ok(())
     }
-
-    // pub fn add<T: Serialize + Hash>(&mut self, value: &T) {
-    // pub fn add_bulk<T: Serialize + Hash>(&mut self, values: Vec<PyObject>) {
-    /// Adds items in bulk
-    pub fn add_bulk<T: Serialize + Hash>(&mut self, values: Vec<&T>) {
-        for value in values.iter() {
-            let serialized_value = serde_json::to_vec(value).expect("Failed to serialize value");
-            // let serialized_value = bincode::serialize(value)?;
-            self.add_bytes(&serialized_value);
+    pub fn add_bulk(&mut self, py: Python, items: Vec<PyObject>) -> PyResult<()> {
+        for item in items.iter() {
+            self.add(py, item.clone())?;
         }
-    }
-
-    /// Adds an item to the BloomFilter
-    pub fn add<T: Serialize + Hash>(&mut self, value: &T) -> Result<(), Box<dyn std::error::Error>> {
-        let serialized_value = serde_json::to_vec(value).expect("Failed to serialize value");
-        // let serialized_value = bincode::serialize(value)?;
-        self.add_bytes(&serialized_value);
         Ok(())
     }
+    pub fn contains(&self, py: Python, item: PyObject) -> PyResult<bool> {
 
-    /// Checks if a given item may be contained by the BloomFilter
-    /// True: maybe
-    /// False: definitely no
-    pub fn contains_bytes(&self, hash_bytes: &[u8]) -> bool {
-        for i in 0..self.hashes {
-            let mut reader = Cursor::new(hash_bytes);
-            let hash_value = murmur3::murmur3_32(&mut reader, i as u32).unwrap();
+        // Create a mutable Vec<u8> to store the hash bytes
+        let mut py_bytes: Vec<u8> = Vec::new();
 
-            let index = hash_value % (self.bitvec.len() as u32 * 8);
-            let byte_pos = (index / 8) as usize;
-            let bit_pos = index % 8;
+        // Populate the hash bytes vector
+        hash_pyobject(py, &item, &mut py_bytes)?;
 
-            // If any bit is not set, the item is definitely not in the filter
-            if self.bitvec[byte_pos] & (1 << bit_pos) == 0 {
-                return false;
-            }
+        // use Python built-in hash function if we cannot hash the object efficiently
+        if py_bytes.is_empty() {
+            let hash_val: i64 = item.call_method0(py, "__hash__")?.extract(py)?;
+            // Convert the i64 hash value to bytes and extend py_bytes
+            py_bytes.extend_from_slice(&hash_val.to_ne_bytes());
         }
 
-        // If all bits are set, the item might be in the filter
-        return true;
-
+        // Return boolean
+        Ok(self.bloomfilter.contains_bytes(&py_bytes))
     }
-    /// Check is a biven item may be contained in the BLoomFilter
-    pub fn contains<T: Serialize>(&self, value: &T) -> bool {
-        let serialized_value = serde_json::to_vec(value).expect("Failed to serialize value");
-
-        return self.contains_bytes(&serialized_value);
+    pub fn get_number_of_hashes(&self, py: Python) -> PyResult<Py<PyLong>> {
+        let py_hash_count: PyObject = self.bloomfilter.hashes.into_py(py);
+        let py_long_hash_count = py_hash_count.extract::<Py<PyLong>>(py)?;
+        Ok(py_long_hash_count)
+    }
+    pub fn get_number_of_bits(&self, py: Python) -> PyResult<Py<PyLong>> {
+        let bitlen: PyObject = self.bloomfilter.bitvec.len().into_py(py);
+        let py_long_biglen = bitlen.extract::<Py<PyLong>>(py)?;
+        Ok(py_long_biglen)
     }
 
-    /// Estimates the false positive rate.
-    ///
-    /// # Arguments
-    ///
-    /// * `n_hashes` - The number of hash functions used.
-    /// * `n_bits` - The number of bits in the filter.
-    /// * `expected_n_of_items` - The expected number of items to be inserted.
-    ///
-    /// # Example
-    /// ```
-    /// let rate = estimate_false_positive_rate(3, 1000, 300);
-    /// ```
     pub fn estimate_false_positive_rate(&self) -> f64 {
-        let n_hashes_f64 = self.hashes as f64;
-        let n_bits_f64 = self.bitvec.len() as f64;
-        let expected_n_of_items_f64 = self.expected_n_items as f64;
-
-        (1.0 - f64::exp(-n_hashes_f64 * expected_n_of_items_f64 / n_bits_f64)).powf(n_hashes_f64)
+        self.bloomfilter.estimate_false_positive_rate()
     }
-
-
 
 }
 
-// todo cleanup tests
-#[cfg(test)]
-mod tests_insert_and_get {
-    use super::*;
-
-    #[test]
-    fn test_add_and_contains() {
-        let mut bf = _BloomFilter::new(3, 0.01);
-
-        bf.add(&"test");
-        bf.add(&1);
 
 
-        println!("bitsize: {}", bf.bitvec.len());
-        println!("n hashes: {}", bf.hashes);
 
-        // Uncomment and fix these assertions
-        assert!(bf.contains(&"test"), "Item 'test' should be in the BloomFilter");
-        assert!(bf.contains(&1), "Item 'test' should be in the BloomFilter");
-        // not in
-        assert!(!bf.contains(&"bar"), "Item 'bar' should not be in the BloomFilter");
-        assert!(!bf.contains(&"nee"), "Item 'nee' should not be in the BloomFilter");
+/// Hashes Python Objects. Returns Bytes
+fn hash_pyobject(py: Python, obj: &PyObject, output: &mut Vec<u8>) -> PyResult<()> {
+    let mut hasher = DefaultHasher::new();
 
-    }
+    let py_any = obj.as_ref(py);
 
-    #[test]
-    fn test_add_bulk() {
-        let mut bf = _BloomFilter::new(3, 0.01);
+    match py_any {
+        // Combine string and various collections into one case
+        obj if obj.cast_as::<PyString>().is_ok()
+            || obj.cast_as::<PyList>().is_ok()
+            || obj.cast_as::<PyDict>().is_ok()
+            || obj.cast_as::<PyTuple>().is_ok()
+            || obj.cast_as::<PySet>().is_ok() => {
+            obj.str()?.to_string().hash(&mut hasher)
+        },
 
-        bf.add_bulk(vec![&"een", &"twee", &"drie"]);
+        // Combine integer types
+        obj if obj.cast_as::<PyInt>().is_ok() || obj.cast_as::<PyLong>().is_ok() => {
+            obj.extract::<i64>()?.hash(&mut hasher)
+        },
 
+        // Floats
+        obj if obj.cast_as::<PyFloat>().is_ok() => {
+            obj.extract::<f64>()?.to_bits().hash(&mut hasher)
+        },
 
-        println!("bitsize: {}", bf.bitvec.len());
-        println!("n hashes: {}", bf.hashes);
+        // Booleans
+        obj if obj.cast_as::<PyBool>().is_ok() => {
+            obj.extract::<bool>()?.hash(&mut hasher)
+        },
 
-        // Uncomment and fix these assertions
-        assert!(bf.contains(&"een"), "Item 'een' should be in the BloomFilter");
-        assert!(bf.contains(&"twee"), "twee 'twee' should be in the BloomFilter");
-        // not in
-        assert!(!bf.contains(&"nope"), "Item 'nope' should not be in the BloomFilter");
-        assert!(!bf.contains(&"nein"), "Item 'nein' should not be in the BloomFilter");
+        // Date and time types
+        obj if obj.cast_as::<PyDate>().is_ok()
+            || obj.cast_as::<PyDateTime>().is_ok()
+            || obj.cast_as::<PyTime>().is_ok() => {
+            obj.call_method0("isoformat")?.to_string().hash(&mut hasher)
+        },
 
-    }
+        // Functions get converted to string and hashed
+        obj if obj.cast_as::<PyFunction>().is_ok() => {
+            obj.str()?.to_string().hash(&mut hasher)
+        },
 
-    #[test]
-    fn test_insert_and_get() {
-        let mut bf = _BloomFilter::new(3, 0.01);
+        // Default case for other types
+        _ => {
+            // Call Python's `__hash__` function to get a hash value todo this should be optimized
+            let hash_val: i64 = obj.call_method0(py, "__hash__")?.extract(py)?;
+            hasher.write_i64(hash_val);
 
-        bf.add(&"test");
-        bf.add(&1);
+        },
+    };
 
+    let hash_bytes = hasher.finish().to_ne_bytes();
+    output.extend_from_slice(&hash_bytes);
 
-        println!("bitsize: {}", bf.bitvec.len());
-        println!("n hashes: {}", bf.hashes);
+    Ok(())
 
-        // Uncomment and fix these assertions
-        assert!(bf.contains(&"test"), "Item 'test' should be in the BloomFilter");
-        assert!(bf.contains(&1), "Item 'test' should be in the BloomFilter");
-        // not in
-        assert!(!bf.contains(&"bar"), "Item 'bar' should not be in the BloomFilter");
-        assert!(!bf.contains(&"nee"), "Item 'nee' should not be in the BloomFilter");
-
-    }
-
-    #[test]
-    fn test_false_positive_rate() {
-        let n = 1000; // Number of items to insert
-        let p = 0.01; // Desired false positive probability
-        let mut bloom_filter = _BloomFilter::new(n, p);
-
-        // Insert `n` items into the filter
-        for i in 0..n {
-            bloom_filter.add(&i);
-        }
-
-        // Check `n` different items and count the false positives
-        let false_positives = (n..2*n).filter(|i| bloom_filter.contains(i)).count();
-
-        let expected_false_positives = (n as f64 * p) as usize;
-        assert!(
-            false_positives <= expected_false_positives,
-            "Too many false positives: {}, expected at most {}", false_positives, expected_false_positives
-        );
-    }
-
-    #[test]
-    fn test_estimate_false_positive_rate() {
-        let n = 1000; // Number of items to insert
-        let p = 0.01; // Desired false positive probability
-        let mut bloom_filter = _BloomFilter::new(n, p);
-
-        println!("test: {}", bloom_filter.estimate_false_positive_rate());
-
-        assert!(bloom_filter.estimate_false_positive_rate() == 0, "Estimated false positive rate cannot be 0");
-    }
-
-    #[test]
-    fn test_serialization() {
-        let mut bloom_filter = _BloomFilter::new(100, 0.01);
-        bloom_filter.add(&"test item");
-
-        let serialized = serde_json::to_string(&bloom_filter).expect("Failed to serialize");
-        // println!("serialized: {}", serialized);
-        let deserialized: _BloomFilter = serde_json::from_str(&serialized).expect("Failed to deserialize");
-
-        assert!(deserialized.contains(&"test item"), "Deserialized filter should contain the item");
-    }
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde::{Serialize, Deserialize};
-
-    #[derive(Serialize, Deserialize, Hash)]
-    struct TestItem {
-        key: i32,
-        value: String,
-    }
-
-    #[test]
-    fn test_add_and_get() {
-        let mut bloom_filter = _BloomFilter::new(100, 0.01);
-        let item = TestItem { key: 1, value: "test".to_string() };
-
-        // Item should not be in the filter initially
-        assert!(!bloom_filter.contains(&item), "Item should not be in the filter yet");
-
-        bloom_filter.add(&item);
-
-        // Item should be in the filter after adding
-        assert!(bloom_filter.contains(&item), "Item should be in the filter after adding");
-    }
-
-    #[test]
-    fn test_false_positive_rate() {
-        let n = 1000; // Number of items to insert
-        let p = 0.01; // Desired false positive probability
-        let mut bloom_filter = _BloomFilter::new(n, p);
-
-        // Insert `n` items into the filter
-        for i in 0..n {
-            let item = TestItem { key: i as i32, value: format!("item{}", i) };
-            bloom_filter.add(&item);
-        }
-
-        // Check `n` different items and count the false positives
-        let false_positives = (n..2*n).filter(|&i| {
-            let item = TestItem { key: i as i32, value: format!("item{}", i) };
-            bloom_filter.contains(&item)
-        }).count();
-
-        let expected_false_positives = (n as f64 * p) as usize;
-        assert!(
-            false_positives <= expected_false_positives,
-            "Too many false positives: {}, expected at most {}", false_positives, expected_false_positives
-        );
-    }
-
-    #[test]
-    fn test_add_and_get_bytes_directly() {
-        let mut bloom_filter = _BloomFilter::new(100, 0.01);
-
-        // Generate a random byte array
-        let some_bytes: Vec<u8> = vec![12, 48, 94, 127, 255];
-
-        // Ensure the bytes are not in the filter initially
-        assert!(!bloom_filter.contains_bytes(&some_bytes), "Bytes should not be in the filter yet");
-
-        bloom_filter.add_bytes(&some_bytes);
-
-        // Now the bytes should be in the filter
-        assert!(bloom_filter.contains_bytes(&some_bytes), "Bytes should be in the filter after adding");
-    }
-
+/// Create the Python module
+#[pymodule]
+fn bloomlib(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<BloomFilter>()?;
+//     m.add_function(wrap_pyfunction!(estimate_false_positive_rate, m)?)?;
+    Ok(())
 }
