@@ -13,6 +13,7 @@ use crate::bloom_filter::BloomFilterRS;  // For Python, PyResult
 
 mod bloom_filter;
 mod serialization;
+mod counting_bloom_filter;
 
 
 // Standard Bloom Filter
@@ -154,3 +155,6 @@ fn bloomlib(_py: Python, m: &PyModule) -> PyResult<()> {
 //     m.add_function(wrap_pyfunction!(estimate_false_positive_rate, m)?)?;
     Ok(())
 }
+
+
+
