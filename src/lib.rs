@@ -68,6 +68,10 @@ impl BloomFilter {
         // Return boolean
         Ok(self.bloomfilter.contains_bytes(&py_bytes))
     }
+    pub fn clear(&mut self) -> PyResult<()> {
+        self.bloomfilter.clear();
+        Ok(())
+    }
     pub fn get_number_of_hashes(&self, py: Python) -> PyResult<Py<PyLong>> {
         let py_hash_count: PyObject = self.bloomfilter.hashes.into_py(py);
         let py_long_hash_count = py_hash_count.extract::<Py<PyLong>>(py)?;
@@ -78,7 +82,6 @@ impl BloomFilter {
         let py_long_biglen = bitlen.extract::<Py<PyLong>>(py)?;
         Ok(py_long_biglen)
     }
-
     pub fn estimate_false_positive_rate(&self) -> f64 {
         self.bloomfilter.estimate_false_positive_rate()
     }

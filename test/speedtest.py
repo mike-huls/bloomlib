@@ -5,15 +5,15 @@ from typing import List
 
 from bloomlib import BloomFilter
 from test.utils.timing import display_times, Timing, performance_check
-from test.utils.utils_for_testing import random_str
+from test.utils.utils_for_testing import random_str, Timer
 
 LANGUAGE = "RUST"
 
 def test_time_add():
     """ """
     strt = time.perf_counter()
-    for elem_count in [10]:
-    # for elem_count in [10, 1_000, 100_000]:
+    # for elem_count in [10]:
+    for elem_count in [10, 1_000, 100_000]:
         bloom = BloomFilter(expected_number_of_items=elem_count, desired_false_positive_rate=0.05)
         string_list = [random_str(16) for _ in range(elem_count)]
         int_list = [random.randint(a=0, b=1000) for _ in range(elem_count)]
@@ -53,6 +53,32 @@ def test_time_contains():
         Timing(name=f'contains int', times=[t * 1_000 for t in t_contains_int_exists], size=None),
         Timing(name=f'contains unknown int', times=[t * 1_000 for t in t_contains_int_not_exists], size=None),
     ], name=f"{LANGUAGE} Contains (#{len(string_list)})", decimals=9)
+
+def test_false_positive_rate():
+
+    elem_count = 10_000
+
+    bloom = BloomFilter(expected_number_of_items=elem_count, desired_false_positive_rate=0.05)
+
+    with Timer("Making strs"):
+        strs = {random_str(16) for _ in range(elem_count)}
+
+    with Timer("Adding strs"):
+        for s in strs:
+            bloom.add(s)
+
+    with Timer("checking no false negatives"):
+        assert all(bloom.contains(s) for s in strs)
+
+    with Timer("checking false positives"):
+        false_positives = sum(bloom.contains(random_str(15)) for _ in range(elem_count))
+
+    fpr_estimated = bloom.estimate_false_positive_rate()
+    print(f"False positive estimate: {fpr_estimated * 100:.05f}%")
+
+
+    fpr_empirical = false_positives / elem_count
+    print(f"False positives: {false_positives} ({fpr_empirical * 100:.05f}%)")
 
 
 def test_performance_check():

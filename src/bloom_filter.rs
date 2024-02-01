@@ -80,7 +80,7 @@ impl BloomFilterRS {
         let num_of_hashes = calculate_optimal_number_of_hashes(num_of_bits, expected_number_of_items);
 
         BloomFilterRS {
-            bitvec: vec![0; num_of_bits],
+            bitvec: vec![0; num_of_bits / 8],
             hashes: num_of_hashes,
             expected_n_items: expected_number_of_items
         }
@@ -93,26 +93,19 @@ impl BloomFilterRS {
             let hash_value = murmur3::murmur3_32(&mut reader, i as u32).unwrap();
 
             let index = hash_value % (self.bitvec.len() as u32 * 8);  // Total number of bits
+            // println!("a idx: {:?}", &index);
+
             let byte_pos = (index / 8) as usize;  // Position of the byte in the vector
             let bit_pos = index % 8;             // Position of the bit in the byte
-            self.bitvec[byte_pos] |= 1 << bit_pos;
+            self.bitvec[byte_pos] |= 1 << bit_pos;      // set bit at pos to 1 if it isnt already
         }
     }
 
-    // pub fn add<T: Serialize + Hash>(&mut self, value: &T) {
-    // pub fn add_bulk<T: Serialize + Hash>(&mut self, values: Vec<PyObject>) {
-    /// Adds items in bulk
-    pub fn add_bulk<T: Serialize + Hash>(&mut self, items: Vec<&T>) {
-        for item in items.iter() {
-            self.add(item);
-        }
-    }
 
     /// Adds an item to the BloomFilter
-    pub fn add<T: Serialize + Hash>(&mut self, item: &T) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn add<T: Serialize + Hash>(&mut self, item: &T) {
         let serialized_item = serialization::serialize(item);
         self.add_bytes(&serialized_item);
-        Ok(())
     }
 
     /// Checks if a given item may be contained by the BloomFilter
@@ -124,6 +117,7 @@ impl BloomFilterRS {
             let hash_value = murmur3::murmur3_32(&mut reader, i as u32).unwrap();
 
             let index = hash_value % (self.bitvec.len() as u32 * 8);
+            // println!("c idx: {:?}", &index);
             let byte_pos = (index / 8) as usize;
             let bit_pos = index % 8;
 
@@ -140,8 +134,15 @@ impl BloomFilterRS {
     /// Check is a biven item may be contained in the BLoomFilter
     pub fn contains<T: Serialize>(&self, item: &T) -> bool {
         let serialized_item = serialization::serialize(item);
+        // println!("c val: {:?}", &serialized_item);
 
         return self.contains_bytes(&serialized_item);
+    }
+
+    /// Clears the current BLoom filter
+    pub fn clear(& mut self) {
+        let filter_len = self.bitvec.len();
+        self.bitvec = vec![0; filter_len];
     }
 
     /// Estimates the false positive rate.
@@ -163,19 +164,24 @@ impl BloomFilterRS {
 
         (1.0 - f64::exp(-n_hashes_f64 * expected_n_of_items_f64 / n_bits_f64)).powf(n_hashes_f64)
     }
-
-
-
 }
 
 
 #[cfg(test)]
 mod tests_insert_and_get {
     use super::*;
+    use serde::{Serialize, Deserialize};
+    use crate::bloomlib;
+
+    #[derive(Serialize, Deserialize, Hash)]
+    struct TestItem {
+        key: i32,
+        value: String,
+    }
 
     #[test]
     fn test_add_and_contains() {
-        let mut bf = BloomFilterRS::new(3, 0.01);
+        let mut bf = BloomFilterRS::new(10, 0.01);
 
         bf.add(&"test");
         bf.add(&1);
@@ -183,6 +189,10 @@ mod tests_insert_and_get {
 
         println!("bitsize: {}", bf.bitvec.len());
         println!("n hashes: {}", bf.hashes);
+
+        // println!("not bar: {}", bf.contains(&"bar"));
+        // println!("yes test: {}", bf.contains(&"test"));
+        // println!("not 1: {}", bf.contains(&1));
 
         // Uncomment and fix these assertions
         assert!(bf.contains(&"test"), "Item 'test' should be in the BloomFilter");
@@ -194,10 +204,26 @@ mod tests_insert_and_get {
     }
 
     #[test]
-    fn test_add_bulk() {
+    fn test_add_and_get_objects() {
+        let mut bloom_filter = BloomFilterRS::new(100, 0.01);
+        let item = TestItem { key: 1, value: "test".to_string() };
+
+        // Item should not be in the filter initially
+        assert!(!bloom_filter.contains(&item), "Item should not be in the filter yet");
+
+        bloom_filter.add(&item);
+
+        // Item should be in the filter after adding
+        assert!(bloom_filter.contains(&item), "Item should be in the filter after adding");
+        assert!(!bloom_filter.contains(&"hello"), "Item should be in the filter after adding");
+    }
+    #[test]
+    fn test_add_multiple_items() {
         let mut bf = BloomFilterRS::new(3, 0.01);
 
-        bf.add_bulk(vec![&"een", &"twee", &"drie"]);
+        bf.add(&"een");
+        bf.add(&"twee");
+        bf.add(&"drie");
 
 
         println!("bitsize: {}", bf.bitvec.len());
@@ -213,7 +239,7 @@ mod tests_insert_and_get {
     }
 
     #[test]
-    fn test_insert_and_get() {
+    fn test_insert_and_contains() {
         let mut bf = BloomFilterRS::new(3, 0.01);
 
         bf.add(&"test");
@@ -233,35 +259,30 @@ mod tests_insert_and_get {
     }
 
     #[test]
-    fn test_false_positive_rate() {
-        let n = 1000; // Number of items to insert
-        let p = 0.01; // Desired false positive probability
-        let mut bloom_filter = BloomFilterRS::new(n, p);
+    fn test_clear_filter() {
+        let mut bloom_filter = BloomFilterRS::new(100, 0.01);
+        let item = TestItem { key: 1, value: "test".to_string() };
+        assert!(!bloom_filter.contains(&item), "Item should not be in the filter yet");
+        bloom_filter.add(&item);
+        assert!(bloom_filter.contains(&item), "Item should be in the filter after adding");
+        bloom_filter.clear();
+        assert!(!bloom_filter.contains(&item), "Item shouldnt be in filter since it's cleared");
 
-        // Insert `n` items into the filter
-        for i in 0..n {
-            bloom_filter.add(&i);
-        }
-
-        // Check `n` different items and count the false positives
-        let false_positives = (n..2*n).filter(|i| bloom_filter.contains(i)).count();
-
-        let expected_false_positives = (n as f64 * p) as usize;
-        assert!(
-            false_positives <= expected_false_positives,
-            "Too many false positives: {}, expected at most {}", false_positives, expected_false_positives
-        );
     }
-
     #[test]
-    fn test_estimate_false_positive_rate() {
-        let n = 1000; // Number of items to insert
-        let p = 0.01; // Desired false positive probability
-        let mut bloom_filter = BloomFilterRS::new(n, p);
+    fn test_add_and_get_bytes_directly() {
+        let mut bloom_filter = BloomFilterRS::new(100, 0.01);
 
-        println!("test: {}", bloom_filter.estimate_false_positive_rate());
+        // Generate a random byte array
+        let some_bytes: Vec<u8> = vec![12, 48, 94, 127, 255];
 
-        assert!(bloom_filter.estimate_false_positive_rate() != 0.0, "Estimated false positive rate cannot be 0");
+        // Ensure the bytes are not in the filter initially
+        assert!(!bloom_filter.contains_bytes(&some_bytes), "Bytes should not be in the filter yet");
+
+        bloom_filter.add_bytes(&some_bytes);
+
+        // Now the bytes should be in the filter
+        assert!(bloom_filter.contains_bytes(&some_bytes), "Bytes should be in the filter after adding");
     }
 
     #[test]
@@ -288,59 +309,88 @@ mod tests {
         value: String,
     }
 
-    #[test]
-    fn test_add_and_get() {
-        let mut bloom_filter = BloomFilterRS::new(100, 0.01);
-        let item = TestItem { key: 1, value: "test".to_string() };
 
-        // Item should not be in the filter initially
-        assert!(!bloom_filter.contains(&item), "Item should not be in the filter yet");
-
-        bloom_filter.add(&item);
-
-        // Item should be in the filter after adding
-        assert!(bloom_filter.contains(&item), "Item should be in the filter after adding");
-    }
 
     #[test]
     fn test_false_positive_rate() {
+        let n = 500_000; // Number of items to insert
+        let p = 0.05; // Desired false positive probability
+        let mut bloom_filter = BloomFilterRS::new(n, p);
+
+        println!("hashes: {}", bloom_filter.hashes);
+        println!("bits: {}", bloom_filter.bitvec.len());
+
+
+        // Insert `n` items into the filter
+        for i in 0..n {
+            bloom_filter.add(&i);
+        }
+
+        // Check `n` different items and count the false positives
+        let fp_count_observed = (n..n*2).filter(|&i| {
+            // println!("does {} contain? {}", &i, bloom_filter.contains(&i));
+            bloom_filter.contains(&i)
+        }).count();
+
+        println!("contains n+1: {}", bloom_filter.contains(&10001));
+        println!("contains n*2: {}", bloom_filter.contains(&20000));
+        println!("contains n - 1: {}", bloom_filter.contains(&9999));
+
+
+        let fp_count_expected = (n as f64 * p) as usize;
+        println!("bitlen: {}", bloom_filter.bitvec.len());
+        println!("hashes: {}", bloom_filter.hashes);
+        println!("fp's expected: {}", fp_count_expected);
+        println!("fp's observed: {}", fp_count_observed);
+        println!("fp-rate estimate: {}", bloom_filter.estimate_false_positive_rate());
+        assert!(
+            fp_count_observed <= fp_count_expected,
+            "Too many false positives: {}, expected at most {}", fp_count_observed, fp_count_expected
+        );
+    }
+
+    #[test]
+    fn test_can_estimate_false_positive_rate() {
         let n = 1000; // Number of items to insert
+        let p = 0.01; // Desired false positive probability
+        let mut bloom_filter = BloomFilterRS::new(n, p);
+
+        println!("test: {}", bloom_filter.estimate_false_positive_rate());
+
+        assert!(bloom_filter.estimate_false_positive_rate() != 0.0, "Estimated false positive rate cannot be 0");
+    }
+
+    #[test]
+    fn test_false_positive_rate_cgpt() {
+        // Setup
+        let n = 10000; // Number of items to insert
         let p = 0.01; // Desired false positive probability
         let mut bloom_filter = BloomFilterRS::new(n, p);
 
         // Insert `n` items into the filter
         for i in 0..n {
-            let item = TestItem { key: i as i32, value: format!("item{}", i) };
+            let item = format!("item{}", i);
             bloom_filter.add(&item);
         }
 
         // Check `n` different items and count the false positives
-        let false_positives = (n..2*n).filter(|&i| {
-            let item = TestItem { key: i as i32, value: format!("item{}", i) };
+        let fp_count_observed = (n..2*n).filter(|&i| {
+            let item = format!("item{}", i); // Assuming bloom_filter.contains expects a &str
             bloom_filter.contains(&item)
         }).count();
 
-        let expected_false_positives = (n as f64 * p) as usize;
+        // Calculate the expected number of false positives
+        let fp_count_expected = (n as f64 * p).round() as usize;
+
+        println!("Expected false positives: {}", fp_count_expected);
+        println!("Observed false positives: {}", fp_count_observed);
+
+        // Assert that the observed false positives do not exceed the expected amount
         assert!(
-            false_positives <= expected_false_positives,
-            "Too many false positives: {}, expected at most {}", false_positives, expected_false_positives
+            fp_count_observed <= fp_count_expected,
+            "Observed more false positives than expected: {}, expected at most {}", fp_count_observed, fp_count_expected
         );
     }
 
-    #[test]
-    fn test_add_and_get_bytes_directly() {
-        let mut bloom_filter = BloomFilterRS::new(100, 0.01);
-
-        // Generate a random byte array
-        let some_bytes: Vec<u8> = vec![12, 48, 94, 127, 255];
-
-        // Ensure the bytes are not in the filter initially
-        assert!(!bloom_filter.contains_bytes(&some_bytes), "Bytes should not be in the filter yet");
-
-        bloom_filter.add_bytes(&some_bytes);
-
-        // Now the bytes should be in the filter
-        assert!(bloom_filter.contains_bytes(&some_bytes), "Bytes should be in the filter after adding");
-    }
 
 }

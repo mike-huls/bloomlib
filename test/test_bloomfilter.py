@@ -18,16 +18,13 @@ from test.utils.utils_for_testing import random_str, Timer
 #     assert abs(n_hashes - 5) < 2 # should be around 5
 
 # todo check
-def test_calculate_estimated_fp_rate():
-    desired_fp_rate = 0.05
-    bloom = BloomFilter(expected_number_of_items=10_000, desired_false_positive_rate=0.05)
-    assert bloom.estimate_false_positive_rate() > 0
-    assert abs(bloom.estimate_false_positive_rate() - desired_fp_rate) < 0.01   # within 1%
 
-def test_one_thing():
+def test_can_add_and_contains():
 
     bloom = BloomFilter(expected_number_of_items=2, desired_false_positive_rate=0.05)
     bloom.add(1)
+    assert bloom.contains(item=1)
+    assert not bloom.contains(item=1111)
 
 def test_can_add_all_types():
 
@@ -55,37 +52,34 @@ def test_can_add_all_types():
     bloom.add(_time)
     # bloom.add(_dataclass)
 
+
+def test_can_calculate_estimated_fp_rate():
+    desired_fp_rate = 0.05
+    bloom = BloomFilter(expected_number_of_items=10_000, desired_false_positive_rate=0.05)
+    assert bloom.estimate_false_positive_rate() > 0
+    assert abs(bloom.estimate_false_positive_rate() - desired_fp_rate) < 0.01   # within 1%
+
 def test_false_positive_rate():
 
     elem_count = 10_000
+    desired_fp_rate = 0.05
 
-    bloom = BloomFilter(expected_number_of_items=elem_count, desired_false_positive_rate=0.05)
+    bloom = BloomFilter(expected_number_of_items=elem_count, desired_false_positive_rate=desired_fp_rate)
 
-    with Timer("Making strs"):
-        strs = {random_str(16) for _ in range(elem_count)}
+    # Generate strings and add to bloom filter
+    strs = {str(i) for i in range(elem_count)}
+    bloom.add_bulk(items=list(strs))
 
-    with Timer("Adding strs"):
-        for s in strs:
-            bloom.add(s)
+    # assert all added strings are in the bloom filter
+    assert all(bloom.contains(s) for s in strs)
+    false_positives = sum(bloom.contains(str(i)) for i in range(elem_count, elem_count * 2))
 
-    with Timer("checking no false negatives"):
-        assert all(bloom.contains(s) for s in strs)
-
-    with Timer("checking false positives"):
-        false_positives = sum(bloom.contains(random_str(15)) for _ in range(elem_count))
-
+    # Compare calculated fp-rate with observed
     fpr_estimated = bloom.estimate_false_positive_rate()
     print(f"False positive estimate: {fpr_estimated * 100:.05f}%")
-
-
     fpr_empirical = false_positives / elem_count
     print(f"False positives: {false_positives} ({fpr_empirical * 100:.05f}%)")
 
-# todo
-# def test_serialize_deserialize():
-#     bloom = BloomSet(expected_number_of_items=100, desired_false_positive_rate=0.05)
-#     bloom.add_bulk(items=list(range(100)))
-#     print(bloom.to_dict())
 
 
 
