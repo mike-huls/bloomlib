@@ -1,6 +1,6 @@
 ### Make python wrappers accept iterable
 1. Make add_bulk accept any iterable
-2. serialization 
+2. ~~serialization~~ 
 
 
 <hr>

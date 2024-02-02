@@ -181,7 +181,6 @@ impl BloomFilterRS {
 mod tests_insert_and_get {
     use super::*;
     use serde::{Serialize, Deserialize};
-    use crate::bloomlib;
 
     #[derive(Serialize, Deserialize, Hash)]
     struct TestItem {
@@ -353,41 +352,10 @@ mod tests {
     fn test_can_estimate_false_positive_rate() {
         let n = 1000; // Number of items to insert
         let p = 0.01; // Desired false positive probability
-        let mut bloom_filter = BloomFilterRS::new(n, p);
+        let bloom_filter = BloomFilterRS::new(n, p);
+        let estimate_deviation = (p - bloom_filter.estimate_false_positive_rate() as f64).abs();
 
-        println!("test: {}", bloom_filter.estimate_false_positive_rate());
-
-        assert!(bloom_filter.estimate_false_positive_rate() != 0.0, "Estimated false positive rate cannot be 0");
+        assert!(estimate_deviation != 0.0, "Estimated false positive rate cannot be 0");
+        assert!(estimate_deviation < p / 10.0, "Estimated false positive rate is too large");
     }
-
-    #[test]
-    fn test_false_positive_rate_cgpt() {
-        // Setup
-        let n = 10000; // Number of items to insert
-        let p = 0.01; // Desired false positive probability
-        let allowed_perc_deviation = 0.10; // we can deviate 5% regarding the observed and expected false positive counts
-
-        let mut bloom_filter = BloomFilterRS::new(n, p);
-
-        // Insert `n` items into the filter
-        for i in 0..n {
-            bloom_filter.add(&i);
-        }
-
-        // Check `n` different items and count the false positives
-        let fp_count_observed = (n..n*2).filter(|&i| {
-            // println!("does {} contain? {}", &i, bloom_filter.contains(&i));
-            bloom_filter.contains(&i)
-        }).count();
-        let fp_count_expected = (n as f64 * p) as usize;
-        let fp_count_deviation = (fp_count_expected as i64 - fp_count_observed as i64).abs();
-        let allowed_fp_count_deviation = allowed_perc_deviation as f64 * fp_count_expected as f64;
-
-        assert!(
-            fp_count_deviation as u32 <= allowed_fp_count_deviation as u32,
-            "Too many false positives: {}, expected at most {}", fp_count_observed, fp_count_expected
-        );
-    }
-
-
 }

@@ -50,16 +50,6 @@ impl CountingBloomFilter {
     }
 }
 
-fn main() {
-    let mut bloom_filter = CountingBloomFilter::new(100, 3);
-
-    bloom_filter.add(&"item1");
-    println!("Contains item1? {}", bloom_filter.contains(&"item1"));
-
-    bloom_filter.remove(&"item1");
-    println!("Contains item1 after removal? {}", bloom_filter.contains(&"item1"));
-}
-
 
 #[cfg(test)]
 mod tests {
