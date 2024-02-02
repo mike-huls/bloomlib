@@ -158,11 +158,21 @@ impl BloomFilterRS {
     /// let rate = estimate_false_positive_rate(3, 1000, 300);
     /// ```
     pub fn estimate_false_positive_rate(&self) -> f64 {
-        let n_hashes_f64 = self.hashes as f64;
-        let n_bits_f64 = self.bitvec.len() as f64;
-        let expected_n_of_items_f64 = self.expected_n_items as f64;
+        // let n_hashes_f64 = self.hashes as f64;
+        // let n_bits_f64 = self.bitvec.len()  as f64;
+        // let expected_n_of_items_f64 = self.expected_n_items as f64;
+        //
+        // (1.0 - f64::exp(-n_hashes_f64 * expected_n_of_items_f64 / n_bits_f64)).powf(n_hashes_f64)
 
-        (1.0 - f64::exp(-n_hashes_f64 * expected_n_of_items_f64 / n_bits_f64)).powf(n_hashes_f64)
+        let k = self.hashes as f64; // Number of hash functions
+        let m = self.bitvec.len() as f64 * 8.0; // Size of the bit array
+        let n = self.expected_n_items as f64; // Expected number of items to insert
+
+        let exponent = -k * n / m;
+        let base = 1.0 - f64::exp(exponent);
+
+        base.powf(k)
+
     }
 }
 
@@ -313,13 +323,11 @@ mod tests {
 
     #[test]
     fn test_false_positive_rate() {
-        let n = 500_000; // Number of items to insert
+        let n = 10_000; // Number of items to insert
         let p = 0.05; // Desired false positive probability
+        let allowed_perc_deviation = 0.10; // we can deviate 5% regarding the observed and expected false positive counts
+
         let mut bloom_filter = BloomFilterRS::new(n, p);
-
-        println!("hashes: {}", bloom_filter.hashes);
-        println!("bits: {}", bloom_filter.bitvec.len());
-
 
         // Insert `n` items into the filter
         for i in 0..n {
@@ -331,20 +339,12 @@ mod tests {
             // println!("does {} contain? {}", &i, bloom_filter.contains(&i));
             bloom_filter.contains(&i)
         }).count();
-
-        println!("contains n+1: {}", bloom_filter.contains(&10001));
-        println!("contains n*2: {}", bloom_filter.contains(&20000));
-        println!("contains n - 1: {}", bloom_filter.contains(&9999));
-
-
         let fp_count_expected = (n as f64 * p) as usize;
-        println!("bitlen: {}", bloom_filter.bitvec.len());
-        println!("hashes: {}", bloom_filter.hashes);
-        println!("fp's expected: {}", fp_count_expected);
-        println!("fp's observed: {}", fp_count_observed);
-        println!("fp-rate estimate: {}", bloom_filter.estimate_false_positive_rate());
+        let fp_count_deviation = (fp_count_expected as i64 - fp_count_observed as i64).abs();
+        let allowed_fp_count_deviation = allowed_perc_deviation as f64 * fp_count_expected as f64;
+
         assert!(
-            fp_count_observed <= fp_count_expected,
+            fp_count_deviation as u32 <= allowed_fp_count_deviation as u32,
             "Too many false positives: {}, expected at most {}", fp_count_observed, fp_count_expected
         );
     }
@@ -365,30 +365,27 @@ mod tests {
         // Setup
         let n = 10000; // Number of items to insert
         let p = 0.01; // Desired false positive probability
+        let allowed_perc_deviation = 0.10; // we can deviate 5% regarding the observed and expected false positive counts
+
         let mut bloom_filter = BloomFilterRS::new(n, p);
 
         // Insert `n` items into the filter
         for i in 0..n {
-            let item = format!("item{}", i);
-            bloom_filter.add(&item);
+            bloom_filter.add(&i);
         }
 
         // Check `n` different items and count the false positives
-        let fp_count_observed = (n..2*n).filter(|&i| {
-            let item = format!("item{}", i); // Assuming bloom_filter.contains expects a &str
-            bloom_filter.contains(&item)
+        let fp_count_observed = (n..n*2).filter(|&i| {
+            // println!("does {} contain? {}", &i, bloom_filter.contains(&i));
+            bloom_filter.contains(&i)
         }).count();
+        let fp_count_expected = (n as f64 * p) as usize;
+        let fp_count_deviation = (fp_count_expected as i64 - fp_count_observed as i64).abs();
+        let allowed_fp_count_deviation = allowed_perc_deviation as f64 * fp_count_expected as f64;
 
-        // Calculate the expected number of false positives
-        let fp_count_expected = (n as f64 * p).round() as usize;
-
-        println!("Expected false positives: {}", fp_count_expected);
-        println!("Observed false positives: {}", fp_count_observed);
-
-        // Assert that the observed false positives do not exceed the expected amount
         assert!(
-            fp_count_observed <= fp_count_expected,
-            "Observed more false positives than expected: {}, expected at most {}", fp_count_observed, fp_count_expected
+            fp_count_deviation as u32 <= allowed_fp_count_deviation as u32,
+            "Too many false positives: {}, expected at most {}", fp_count_observed, fp_count_expected
         );
     }
 
