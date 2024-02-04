@@ -22,15 +22,18 @@ _  /_/ /_  /  / /_/ // /_/ /_  / / / / /_  /  _  /  _  /_/ /
 optimize your applications in an easy and intuitive way.
 It aims to be the go-to package to build and use Bloom Filters that make your applications 
 superfast, memory-efficient and user-friendly.
+```shell
+pip install bloomlib
+```
 
 ## Table of Contents
-
 - [Main Features](#main-features)
 - [Usage Example](#usage-example)
 - [Installation](#installation)
 - [Dependencies](#dependencies)
 - [License](#license)
 - [Documentation](#documentation)
+- [Development](#development)
 - [Contributing to bloomlib](#contributing-to-bloomlib)
 
 ## Main Features
@@ -47,7 +50,7 @@ bf = BloomFilter(expected_number_of_items=1_000, desired_false_positive_rate=0.0
 
 # 2. Add items
 for i in range(100):
-    bf.add(value=i)
+    bf.add(item=i)
 
 # 3. Check if an item is contained; False means definitely not, True means "maybe" 
 if (bf.contains(item=42)):
@@ -58,31 +61,28 @@ else:
 
 
 ## Installation
+```sh
+pip install bloomlib
+```
 The source code is currently hosted on GitHub at:
 https://github.com/mike-huls/bloomlib
 
 Binary installers for the latest released version are available at the [Python
-Package Index (PyPI)](https://pypi.org/project/bloomlib). Installation is as simple as
-
-```sh
-pip install bloomlib
-```
+Package Index (PyPI)](https://pypi.org/project/bloomlib).
 
 ## Dependencies
-Bloomlib has no dependencies
+Bloomlib has no Python dependencies
 
 ## License
-[MIT](LICENSE.md)
+[MIT](LICENSE.txt)
 
 ## Documentation
 🔨 Under construction
 
-## Future development
-- additional types of filters
-
-
-## Contributing to bloomlib
-Feel free to submit bug reports, bug fixes, feature requests, documentation improvements or enhancements; all ideas are welcome!
+## Development
+Find the changelog and list of upcoming features [here](doc/CHANGELOG.md).
+<br>
+**Contributions** are always welcome; feel free to submit bug reports, bug fixes, feature requests, documentation improvements or enhancements!
 
 <hr>
 

@@ -60,56 +60,66 @@ pub fn calculate_optimal_number_of_hashes(bit_array_size:usize, expected_number_
 /// A struct representing a BloomFilter
 // #[derive(Serialize, Deserialize)]
 pub struct BloomFilterRS {
-    /// Memory size; number of bits
-    pub bitvec: BitVec, // Use BitVec for direct bit manipulation
+    /// Memory size; number of bits; array
+    bit_array: BitVec,
     /// The number of time an item should be hashed with different types of hash functions or seeds
-    pub hashes: usize,
+    count_of_hashes: usize,
     /// The expected number of items this Bloom Filter should hold
     expected_n_items:usize,
 }
 
 impl BloomFilterRS {
     pub fn new(expected_number_of_items: usize, desired_false_positive_rate: f64) -> Self {
-        // todo fp_rate to f64 or smaller?
         let num_of_bits = calc_optimal_number_of_bits(expected_number_of_items, desired_false_positive_rate);
         let num_of_hashes = calculate_optimal_number_of_hashes(num_of_bits, expected_number_of_items);
 
         BloomFilterRS {
-            // bitvec: bitvec!([0; num_of_bits]),
-            bitvec: BitVec::repeat(false, num_of_bits),
-            hashes: num_of_hashes,
+            bit_array: BitVec::repeat(false, num_of_bits),
+            count_of_hashes: num_of_hashes,
             expected_n_items: expected_number_of_items
         }
     }
 
+    /// Adds bytes to theh BLoom Filter
+    /// Returns void
+    ///
+    /// # Arguments
+    /// * `hash_bytes` - item to insert into the filter
     pub fn add_bytes(&mut self, hash_bytes: &[u8]) {
-        for i in 0..self.hashes {
+        for i in 0..self.count_of_hashes {
             // let hash_value = fasthash::murmur3::hash32_with_seed(hash_bytes, i as u32);
             let mut reader = Cursor::new(hash_bytes);
             let hash_value = murmur3::murmur3_32(&mut reader, i as u32).unwrap();
 
-            let index = hash_value % (self.bitvec.len() as u32);
-            self.bitvec.set(index as usize, true);
+            let index = hash_value % (self.bit_array.len() as u32);
+            self.bit_array.set(index as usize, true);
         }
     }
 
 
-    /// Adds an item to the BloomFilter
+    /// Hashes an item to the Bloom Filter
+    /// Returns void
+    ///
+    /// # Arguments
+    /// * `item` - item to insert into the filter
     pub fn add<T: Serialize + Hash>(&mut self, item: &T) {
         let serialized_item = serialization::serialize(item);
         self.add_bytes(&serialized_item);
     }
 
     /// Checks if a given item may be contained by the BloomFilter
-    /// True: maybe
-    /// False: definitely no
+    /// Returns boolean: False means that the item definitely isn't contained.
+    /// True means that the item may be contained in the filter
+    ///
+    /// # Arguments
+    /// * `item` - bytes to check for membership
     pub fn contains_bytes(&self, hash_bytes: &[u8]) -> bool {
-        for i in 0..self.hashes {
+        for i in 0..self.count_of_hashes {
             let mut reader = Cursor::new(hash_bytes);
             let hash_value = murmur3::murmur3_32(&mut reader, i as u32).unwrap();
 
-            let index = hash_value % (self.bitvec.len() as u32);
-            if !self.bitvec[index as usize] {
+            let index = hash_value % (self.bit_array.len() as u32);
+            if !self.bit_array[index as usize] {
                 return false;
             }
         }
@@ -118,7 +128,13 @@ impl BloomFilterRS {
         return true;
 
     }
-    /// Check is a biven item may be contained in the BLoomFilter
+
+    /// Checks if a given item may be contained by the BloomFilter
+    /// Returns boolean: False means that the item definitely isn't contained.
+    /// True means that the item may be contained in the filter
+    ///
+    /// # Arguments
+    /// * `item` - item to be hashed and checked for membership
     pub fn contains<T: Serialize>(&self, item: &T) -> bool {
         let serialized_item = serialization::serialize(item);
         // println!("c val: {:?}", &serialized_item);
@@ -126,11 +142,10 @@ impl BloomFilterRS {
         return self.contains_bytes(&serialized_item);
     }
 
-    /// Clears the current BLoom filter
+    /// CLears the Bloom Filter
     pub fn clear(& mut self) {
-        let filter_len = self.bitvec.len();
-        // self.bitvec = bitvec!([0; filter_len]);
-        self.bitvec = BitVec::repeat(false, filter_len);
+        let filter_len = self.bit_array.len();
+        self.bit_array = BitVec::repeat(false, filter_len);
     }
 
     /// Estimates the false positive rate.
@@ -141,8 +156,8 @@ impl BloomFilterRS {
     /// let rate = estimate_false_positive_rate();
     /// ```
     pub fn estimate_false_positive_rate(&self) -> f64 {
-        let k = self.hashes as f64; // Number of hash functions
-        let m = self.bitvec.len() as f64; // Size of the bit array
+        let k = self.count_of_hashes as f64; // Number of hash functions
+        let m = self.bit_array.len() as f64; // Size of the bit array
         let n = self.expected_n_items as f64; // Expected number of items to insert
 
         let exponent = -k * n / m;
@@ -150,6 +165,18 @@ impl BloomFilterRS {
 
         base.powf(k)
 
+    }
+
+    /// Retrieve the number of hashes this Bloom Filter uses
+    /// Returns usize: count
+    pub fn get_hash_count(&self) -> usize {
+        self.count_of_hashes
+    }
+
+    /// Retrieve the memory size this Bloom Filter uses (in bits)
+    /// Returns usize: number of bits
+    pub fn get_bit_count(&self) -> usize {
+        self.bit_array.len()
     }
 }
 
@@ -173,8 +200,8 @@ mod tests_insert_and_get {
         bf.add(&1);
 
 
-        println!("bitsize: {}", bf.bitvec.len());
-        println!("n hashes: {}", bf.hashes);
+        println!("bitsize: {}", bf.bit_array.len());
+        println!("n hashes: {}", bf.count_of_hashes);
 
         // println!("not bar: {}", bf.contains(&"bar"));
         // println!("yes test: {}", bf.contains(&"test"));
@@ -212,8 +239,8 @@ mod tests_insert_and_get {
         bf.add(&"drie");
 
 
-        println!("bitsize: {}", bf.bitvec.len());
-        println!("n hashes: {}", bf.hashes);
+        println!("bitsize: {}", bf.bit_array.len());
+        println!("n hashes: {}", bf.count_of_hashes);
 
         // Uncomment and fix these assertions
         assert!(bf.contains(&"een"), "Item 'een' should be in the BloomFilter");
@@ -232,8 +259,8 @@ mod tests_insert_and_get {
         bf.add(&1);
 
 
-        println!("bitsize: {}", bf.bitvec.len());
-        println!("n hashes: {}", bf.hashes);
+        println!("bitsize: {}", bf.bit_array.len());
+        println!("n hashes: {}", bf.count_of_hashes);
 
         // Uncomment and fix these assertions
         assert!(bf.contains(&"test"), "Item 'test' should be in the BloomFilter");
@@ -285,7 +312,7 @@ mod tests_insert_and_get {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_false_positive_rate {
     use super::*;
     use serde::{Serialize, Deserialize};
 
@@ -295,8 +322,6 @@ mod tests {
         value: String,
     }
 
-
-
     #[test]
     fn test_false_positive_rate() {
         let n = 10_000; // Number of items to insert
@@ -304,6 +329,10 @@ mod tests {
         let allowed_perc_deviation = 0.10; // we can deviate 5% regarding the observed and expected false positive counts
 
         let mut bloom_filter = BloomFilterRS::new(n, p);
+
+        println!("get_number_of_bits {}", bloom_filter.get_number_of_bits());
+        println!("get_number_of_hashes {}", bloom_filter.get_number_of_hashes());
+        println!("estimate_false_positive_rate {}", bloom_filter.estimate_false_positive_rate());
 
         // Insert `n` items into the filter
         for i in 0..n {
@@ -318,7 +347,7 @@ mod tests {
         let fp_count_expected = (n as f64 * p) as usize;
         let fp_count_deviation = (fp_count_expected as i64 - fp_count_observed as i64).abs();
         let allowed_fp_count_deviation = allowed_perc_deviation as f64 * fp_count_expected as f64;
-
+        println!("observed {}", fp_count_observed);
         assert!(
             fp_count_deviation as u32 <= allowed_fp_count_deviation as u32,
             "Too many false positives: {}, expected at most {}", fp_count_observed, fp_count_expected

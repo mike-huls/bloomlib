@@ -1,3 +1,4 @@
+import typing
 from typing import List, Any
 
 
@@ -17,7 +18,7 @@ class BloomFilter:
         :param values: List of values that you want added to the bloomset
         :return: void
         """
-    def add_bulk(self, items: List[Any]) -> None:
+    def add_bulk(self, items: typing.Iterable[Any]) -> None:
         """
         Add items in bulk to the Bloom Filter
         :param items: List of items

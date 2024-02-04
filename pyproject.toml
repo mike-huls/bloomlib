@@ -1,44 +1,36 @@
-[tool.poetry]
+[project]
 name = "bloomlib"
-version = "0.0.0"
+version = "0.0.2"
+requires-python = ">=3.9"
 description = "Library that offers all types of Bloom filters, implemented in Rust"
-authors = ["Mike Huls <mikehuls42@gmail.com>"]
-license = "MIT"
+authors = [
+  {email = "mikehuls42@gmail.com"},
+  {name = "Mike Huls"}
+]
+license = {file = "LICENSE.txt"}
 readme = "README.md"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+]
+dynamic = ["version"]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.1.14"
-pytest = "^7.4.4"
-pytest-cov = "^4.1.0"
-rich = "^13.7.0"
 
-[tool.poetry.urls]
+[project.urls]
 "Homepage" = "https://github.com/mike-huls/bloomlib"
 "Bug Tracker" = "https://github.com/mike-huls/bloomlib/issues"
 "Documentation" = "https://github.com/mike-huls/bloomlib/blob/main/README.md/"
 "Source" = "https://github.com/mike-huls/bloomlib/"
 "Say Thanks!" = "https://www.buymeacoffee.com/mikehuls"
 
-
 [build-system]
 requires = ["maturin>=1.4,<2.0"]
 build-backend = "maturin"
 
-[project]
-name = "bloomlib"
-requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Rust",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-]
-dynamic = ["version"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

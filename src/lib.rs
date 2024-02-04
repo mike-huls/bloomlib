@@ -44,12 +44,32 @@ impl BloomFilter {
 
         Ok(())
     }
-    pub fn add_bulk(&mut self, py: Python, items: Vec<PyObject>) -> PyResult<()> {
-        for item in items.iter() {
-            self.add(py, item.clone())?;
+    // pub fn add_bulk(&mut self, py: Python, items: &PyAny) -> PyResult<()> {
+    //     if let Ok(item_iterator) = items.iter() {
+    //         let item = item_iterator.extract()?;
+    //         self.add(py, item)?;
+    //     }
+    //     Ok(())
+    // }
+
+    pub fn add_bulk(&mut self, py: Python, items: &PyAny) -> PyResult<()> {
+    // Check if the provided argument is an iterator
+    if let Ok(item_iterator) = items.iter() {
+        // Iterate over each item
+        for item in item_iterator {
+            // Extract the item as the desired type. Adjust the type as necessary.
+            let item: PyObject = item?.extract()?; // Ensure to replace `YourType` with the actual type you expect
+            // Process each item
+            self.add(py, item)?;
         }
-        Ok(())
+    } else {
+        return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+            "Expected an iterable",
+        ));
     }
+    Ok(())
+}
+
     pub fn contains(&self, py: Python, item: PyObject) -> PyResult<bool> {
 
         // Create a mutable Vec<u8> to store the hash bytes
@@ -73,19 +93,18 @@ impl BloomFilter {
         Ok(())
     }
     pub fn get_number_of_hashes(&self, py: Python) -> PyResult<Py<PyLong>> {
-        let py_hash_count: PyObject = self.bloomfilter.hashes.into_py(py);
+        let py_hash_count: PyObject = self.bloomfilter.get_hash_count().into_py(py);
         let py_long_hash_count = py_hash_count.extract::<Py<PyLong>>(py)?;
         Ok(py_long_hash_count)
     }
     pub fn get_number_of_bits(&self, py: Python) -> PyResult<Py<PyLong>> {
-        let bitlen: PyObject = self.bloomfilter.bitvec.len().into_py(py);
+        let bitlen: PyObject = self.bloomfilter.get_bit_count().into_py(py);
         let py_long_biglen = bitlen.extract::<Py<PyLong>>(py)?;
         Ok(py_long_biglen)
     }
     pub fn estimate_false_positive_rate(&self) -> f64 {
         self.bloomfilter.estimate_false_positive_rate()
     }
-
 }
 
 

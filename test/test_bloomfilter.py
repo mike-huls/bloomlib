@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 
+import pytest
 from bloomlib import BloomFilter
 from test.utils.utils_for_testing import random_str, Timer
 
@@ -59,27 +60,52 @@ def test_can_calculate_estimated_fp_rate():
     assert bloom.estimate_false_positive_rate() > 0
     assert abs(bloom.estimate_false_positive_rate() - desired_fp_rate) < 0.01   # within 1%
 
-def test_false_positive_rate():
-
+def test_get_correct_fprate_when_adding_ints():
     elem_count = 10_000
     desired_fp_rate = 0.05
+    list_of_elements = list(range(elem_count))
 
+    # Create filter and add all elements
     bloom = BloomFilter(expected_number_of_items=elem_count, desired_false_positive_rate=desired_fp_rate)
+    for i in list_of_elements:
+        bloom.add(i)
 
-    # Generate strings and add to bloom filter
-    strs = {str(i) for i in range(elem_count)}
-    bloom.add_bulk(items=list(strs))
+    # assert all added ints are in the bloom filter
+    assert all(bloom.contains(s) for s in list_of_elements)
+    # count_observed should fall within a 10% margin around the expected count
+    count_expected = elem_count * desired_fp_rate
+    count_observed = sum(bloom.contains(i) for i in range(elem_count, elem_count * 2))
+    count_observed_wrong_type = sum(bloom.contains(str(i)) for i in range(elem_count, elem_count * 2))
+    assert abs(count_expected - count_observed) < count_expected * 0.10
+    assert abs(count_expected - count_observed_wrong_type) < count_expected * 0.10
 
-    # assert all added strings are in the bloom filter
-    assert all(bloom.contains(s) for s in strs)
-    false_positives = sum(bloom.contains(str(i)) for i in range(elem_count, elem_count * 2))
+def test_get_correct_fprate_when_bulk_adding_ints():
+    elem_count = 10_000
+    desired_fp_rate = 0.05
+    list_of_elements = list(range(elem_count))
 
-    # Compare calculated fp-rate with observed
-    fpr_estimated = bloom.estimate_false_positive_rate()
-    print(f"False positive estimate: {fpr_estimated * 100:.05f}%")
-    fpr_empirical = false_positives / elem_count
-    print(f"False positives: {false_positives} ({fpr_empirical * 100:.05f}%)")
+    # Create filter and add all elements
+    bloom = BloomFilter(expected_number_of_items=elem_count, desired_false_positive_rate=desired_fp_rate)
+    bloom.add_bulk(items=list_of_elements)
 
+    # assert all added ints are in the bloom filter
+    # assert all(bloom.contains(s) for s in list_of_elements)
+    # count_observed should fall within a 10% margin around the expected count
+    count_expected = elem_count * desired_fp_rate
+    count_observed = sum(bloom.contains(i) for i in range(elem_count, elem_count * 2))
+    count_observed_wrong_type = sum(bloom.contains(str(i)) for i in range(elem_count, elem_count * 2))
+    assert abs(count_expected - count_observed) < count_expected * 0.10
+    assert abs(count_expected - count_observed_wrong_type) < count_expected * 0.10
+
+
+def test_add_bulk_accepts_all_iterables():
+    bloom = BloomFilter(expected_number_of_items=100, desired_false_positive_rate=0.05)
+
+    bloom.add_bulk(items=list([1, 2, 3]))   # list
+    bloom.add_bulk(items=tuple([1, 2, 3]))  # tuple
+    bloom.add_bulk(items={1, 2, 3})    # set
+    with pytest.raises(Exception):
+        bloom.add_bulk(items=3)    # int
 
 
 
