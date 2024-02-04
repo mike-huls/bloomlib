@@ -31,27 +31,45 @@ def test_can_add_all_types():
 
     bloom = BloomFilter(expected_number_of_items=100, desired_false_positive_rate=0.05)
 
-    @dataclasses.dataclass
     class Person:
         name:str
+
+        def __init__(self, name:str):
+            self.name = name
 
     _string = "string"
     _float = 0.004
     _int = 6546
-    _immutable_col = ("tuple", "of", "strings")
-    _mutable_col = ["list", "of", "strings"]
+    _tuple = ("tuple", "of", "strings")
+    _list = ["list", "of", "strings"]
     _datetime = datetime.datetime.now()
     _time = datetime.time()
-    _dataclass = Person(name="mike")
+    _class_instance = Person(name="mike")
 
     bloom.add(_string)
+    assert bloom.contains(item=_string)
+    assert not bloom.contains(item="not_contained")
     bloom.add(_float)
+    assert bloom.contains(item=_float)
+    assert not bloom.contains(item=0.04)
     bloom.add(_int)
-    bloom.add(_immutable_col)
-    bloom.add(_mutable_col)
+    assert bloom.contains(item=_int)
+    assert not bloom.contains(item=42)
+    bloom.add(_tuple)
+    assert bloom.contains(item=_tuple)
+    assert not bloom.contains(item=('not', 'in'))
+    bloom.add(_list)
+    assert bloom.contains(item=_list)
+    assert not bloom.contains(item=['not', 'in'])
     bloom.add(_datetime)
+    assert bloom.contains(item=_datetime)
+    assert not bloom.contains(item=datetime.datetime(year=2009, month=2, day=2, hour=1, minute=2, second=3))
     bloom.add(_time)
-    # bloom.add(_dataclass)
+    assert bloom.contains(item=_time)
+    assert not bloom.contains(item=datetime.time(hour=3, minute=3, second=3))
+    bloom.add(_class_instance)
+    assert bloom.contains(item=_class_instance)
+    assert not bloom.contains(item=Person(name="other"))
 
 
 def test_can_calculate_estimated_fp_rate():

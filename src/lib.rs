@@ -44,23 +44,13 @@ impl BloomFilter {
 
         Ok(())
     }
-    // pub fn add_bulk(&mut self, py: Python, items: &PyAny) -> PyResult<()> {
-    //     if let Ok(item_iterator) = items.iter() {
-    //         let item = item_iterator.extract()?;
-    //         self.add(py, item)?;
-    //     }
-    //     Ok(())
-    // }
 
     pub fn add_bulk(&mut self, py: Python, items: &PyAny) -> PyResult<()> {
     // Check if the provided argument is an iterator
     if let Ok(item_iterator) = items.iter() {
         // Iterate over each item
         for item in item_iterator {
-            // Extract the item as the desired type. Adjust the type as necessary.
-            let item: PyObject = item?.extract()?; // Ensure to replace `YourType` with the actual type you expect
-            // Process each item
-            self.add(py, item)?;
+            self.add(py, item?.extract()?)?;
         }
     } else {
         return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
@@ -117,15 +107,6 @@ fn hash_pyobject(py: Python, obj: &PyObject, output: &mut Vec<u8>) -> PyResult<(
     let py_any = obj.as_ref(py);
 
     match py_any {
-        // Combine string and various collections into one case
-        obj if obj.cast_as::<PyString>().is_ok()
-            || obj.cast_as::<PyList>().is_ok()
-            || obj.cast_as::<PyDict>().is_ok()
-            || obj.cast_as::<PyTuple>().is_ok()
-            || obj.cast_as::<PySet>().is_ok() => {
-            obj.str()?.to_string().hash(&mut hasher)
-        },
-
         // Combine integer types
         obj if obj.cast_as::<PyInt>().is_ok() || obj.cast_as::<PyLong>().is_ok() => {
             obj.extract::<i64>()?.hash(&mut hasher)
@@ -141,6 +122,15 @@ fn hash_pyobject(py: Python, obj: &PyObject, output: &mut Vec<u8>) -> PyResult<(
             obj.extract::<bool>()?.hash(&mut hasher)
         },
 
+        // Combine string and various collections into one case
+        obj if obj.cast_as::<PyString>().is_ok()
+            || obj.cast_as::<PyList>().is_ok()
+            || obj.cast_as::<PyDict>().is_ok()
+            || obj.cast_as::<PyTuple>().is_ok()
+            || obj.cast_as::<PySet>().is_ok() => {
+            obj.str()?.to_string().hash(&mut hasher)
+        },
+
         // Date and time types
         obj if obj.cast_as::<PyDate>().is_ok()
             || obj.cast_as::<PyDateTime>().is_ok()
@@ -153,12 +143,19 @@ fn hash_pyobject(py: Python, obj: &PyObject, output: &mut Vec<u8>) -> PyResult<(
             obj.str()?.to_string().hash(&mut hasher)
         },
 
+        obj if obj.cast_as::<PyDict>().is_ok() => {
+            let dict: &PyDict = obj.extract()?;
+            for (key, value) in dict.into_iter() {
+                key.to_string().hash(&mut hasher);
+                hash_pyobject(py, &value.to_object(py), output)?;
+            }
+        },
+
         // Default case for other types
         _ => {
             // Call Python's `__hash__` function to get a hash value todo this should be optimized
             let hash_val: i64 = obj.call_method0(py, "__hash__")?.extract(py)?;
             hasher.write_i64(hash_val);
-
         },
     };
 

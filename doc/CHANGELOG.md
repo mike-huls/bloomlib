@@ -10,20 +10,21 @@ All notable changes to this project will be documented in this file.
  
 
 ## Upcoming features
-- fix nhashes changed due to bitvec
 - make bloomfilter serializable and deserializable 
-- Make class instances and dataclass instances hashable in pywrapper
 - Benchmark agains `pybloom`, `bloomfilter3` and `bloomfilter`
 <hr>
 
-## 2022-02-03 - v0.0.2
+## 2022-02-04 - v0.0.2
 ### Optimizations and fixes 
 #### Added
 - pywrapper: `add_bulk` method on BloomFilter now accepts any Iterable instead of just a list
+- add methods for getting bits (memory) and number of hashes
 #### Changed
 - BloomFilter now uses array of bits instead of Vec<u8>
 - Made bitarray and hashes private; added get methods
-
+### Fixed
+- pywrapper: `add_bulk` better parsing
+- now accepts class-instances (hashing)
 
 
 ## 2022-01-30 - v0.0.1

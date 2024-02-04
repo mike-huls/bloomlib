@@ -199,13 +199,10 @@ mod tests_insert_and_get {
         bf.add(&"test");
         bf.add(&1);
 
-
-        println!("bitsize: {}", bf.bit_array.len());
-        println!("n hashes: {}", bf.count_of_hashes);
-
-        // println!("not bar: {}", bf.contains(&"bar"));
-        // println!("yes test: {}", bf.contains(&"test"));
-        // println!("not 1: {}", bf.contains(&1));
+        assert!(bf.bit_array.len() > 0, "Bloom filter memory should be >0 bits");
+        assert!(bf.get_bit_count() > 0, "Bloom filter memory should be >0 bits");
+        assert!(bf.count_of_hashes > 0, "Bloom filter hashes count should be >0 ");
+        assert!(bf.get_hash_count() > 0, "Bloom filter hashes count should be >0 ");
 
         // Uncomment and fix these assertions
         assert!(bf.contains(&"test"), "Item 'test' should be in the BloomFilter");
@@ -213,9 +210,7 @@ mod tests_insert_and_get {
         // not in
         assert!(!bf.contains(&"bar"), "Item 'bar' should not be in the BloomFilter");
         assert!(!bf.contains(&"nee"), "Item 'nee' should not be in the BloomFilter");
-
     }
-
     #[test]
     fn test_add_and_get_objects() {
         let mut bloom_filter = BloomFilterRS::new(100, 0.01);
@@ -250,14 +245,12 @@ mod tests_insert_and_get {
         assert!(!bf.contains(&"nein"), "Item 'nein' should not be in the BloomFilter");
 
     }
-
     #[test]
     fn test_insert_and_contains() {
         let mut bf = BloomFilterRS::new(3, 0.01);
 
         bf.add(&"test");
         bf.add(&1);
-
 
         println!("bitsize: {}", bf.bit_array.len());
         println!("n hashes: {}", bf.count_of_hashes);
@@ -270,7 +263,6 @@ mod tests_insert_and_get {
         assert!(!bf.contains(&"nee"), "Item 'nee' should not be in the BloomFilter");
 
     }
-
     #[test]
     fn test_clear_filter() {
         let mut bloom_filter = BloomFilterRS::new(100, 0.01);
@@ -297,7 +289,6 @@ mod tests_insert_and_get {
         // Now the bytes should be in the filter
         assert!(bloom_filter.contains_bytes(&some_bytes), "Bytes should be in the filter after adding");
     }
-
     // #[test]
     // fn test_serialization() {
     //     let mut bloom_filter = BloomFilterRS::new(100, 0.01);
@@ -330,8 +321,8 @@ mod tests_false_positive_rate {
 
         let mut bloom_filter = BloomFilterRS::new(n, p);
 
-        println!("get_number_of_bits {}", bloom_filter.get_number_of_bits());
-        println!("get_number_of_hashes {}", bloom_filter.get_number_of_hashes());
+        println!("get_number_of_bits {}", bloom_filter.get_bit_count());
+        println!("get_number_of_hashes {}", bloom_filter.get_hash_count());
         println!("estimate_false_positive_rate {}", bloom_filter.estimate_false_positive_rate());
 
         // Insert `n` items into the filter
