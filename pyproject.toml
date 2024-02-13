@@ -23,7 +23,7 @@ dynamic = ["version"]
 [project.urls]
 "Homepage" = "https://github.com/mike-huls/bloomlib"
 "Bug Tracker" = "https://github.com/mike-huls/bloomlib/issues"
-"Documentation" = "https://github.com/mike-huls/bloomlib/blob/main/README.md/"
+"Documentation" = "https://github.com/mike-huls/bloomlib/blob/master/README.md/"
 "Source" = "https://github.com/mike-huls/bloomlib/"
 "Say Thanks!" = "https://www.buymeacoffee.com/mikehuls"
 

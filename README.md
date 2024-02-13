@@ -15,7 +15,7 @@ _  /_/ /_  /  / /_/ // /_/ /_  / / / / /_  /  _  /  _  /_/ /
 
 |         |                                                                                                                                                                                                                                      |
 |---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Package | [![PyPI Latest Release](https://img.shields.io/pypi/v/bloomlib.svg)](https://pypi.org/project/bloomlib/) [![PyPI Downloads](https://img.shields.io/pypi/dm/bloomlib.svg?label=PyPI%20downloads)](https://pypi.org/project/bloomlib/) |
+| Package | [![PyPI Latest Release](https://img.shields.io/pypi/v/bloomlib.svg)](https://pypi.org/project/bloomlib/) [![PyPI Downloads](https://img.shields.io/pypi/dm/bloomlib.svg?label=PyPI%20downloads)](https://pypistats.org/packages/bloomlib) |
 | Meta    | ![GitHub License](https://img.shields.io/github/license/mike-huls/bloomlib)                                                                                                                                                          |
 
 **bloomlib** is a Python package that provides superfast Bloom filters, designed to 
