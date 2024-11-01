@@ -5,7 +5,7 @@ name: Publish Bloomlib
 
 steps:
   - name: unittests
-    image: python:3.9-slim-bookworm
+    image: debian:bookworm-slim
     pull: always
     environment:
       CODECOV_TOKEN:
@@ -24,16 +24,11 @@ steps:
       - pip install --upgrade pip
       - pip install coverage codecov maturin pytest
 
-      # Install rustc alternative
-#      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-#      - source $HOME/.cargo/env
-#      - rustc --version
+      # Build the Rust extension with maturin
+      - maturin develop
 
-
-      - maturin develop # Build and install Rust extensions
-      #- python -m unittest discover -s test/ -p "test_*.py"
-#      - py.test --cov-report html --cov=src -v
-      - coverage run -m pytest -s test/
+      # Run unittests + coverage
+      - coverage run --source=bloomlib -m pytest -s test/
       - coverage xml
       - codecov -t "$CODECOV_TOKEN" --commit="$DRONE_COMMIT_SHA"
     when:
@@ -45,7 +40,7 @@ steps:
 
 
   - name: build_and_publish_pypi
-    image: python:3.9-slim-bookworm
+    image: debian:bookworm-slim
     pull: always
     environment:
       PUBLIC_PYPI_TOKEN:
@@ -62,7 +57,7 @@ steps:
       - python -m venv .venv
       - . .venv/bin/activate
       - pip install --upgrade pip
-      - pip install coverage maturin pytest
+      - pip install maturin
 
       - maturin develop # Build and install Rust extensions
       - maturin build --release
@@ -76,7 +71,7 @@ steps:
       - unittests
 
 #  - name: build_and_publish_testpypi
-#    image: python:3.9-slim-bookworm
+#    image: debian:bookworm-slim
 #    pull: always
 #    environment:
 #      PUBLIC_TEST_PYPI_TOKEN:
