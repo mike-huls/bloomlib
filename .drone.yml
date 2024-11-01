@@ -5,7 +5,7 @@ name: Publish Bloomlib
 
 steps:
   - name: unittests
-    image: python:3.12-slim-bookworm
+    image: python:3.9-slim-bookworm
     pull: always
     environment:
       CODECOV_TOKEN:
@@ -40,7 +40,7 @@ steps:
 
 
   - name: build_and_publish_pypi
-    image: python:3.12-slim-bookworm
+    image: python:3.9-slim-bookworm
     pull: always
     environment:
       PUBLIC_PYPI_TOKEN:
@@ -71,7 +71,7 @@ steps:
       - unittests
 
 #  - name: build_and_publish_testpypi
-#    image: python:3.12-slim-bookworm
+#    image: python:3.9-slim-bookworm
 #    pull: always
 #    environment:
 #      PUBLIC_TEST_PYPI_TOKEN:
