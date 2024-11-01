@@ -49,9 +49,13 @@ steps:
     commands:
       - apt-get update
       - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustc
-      -
+
+      # Create and activate venv; install dependencies
+      - python -m venv .venv
+      - . .venv/bin/activate
       - pip install --upgrade pip
-      - pip install maturin
+      - pip install coverage maturin
+
       - maturin develop # Build and install Rust extensions
       - maturin build --release
       - export MATURIN_PYPI_TOKEN="$PUBLIC_PYPI_TOKEN"
