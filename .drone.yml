@@ -13,15 +13,13 @@ steps:
     commands:
       - apt-get update
       - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential
-      - python -m pip install --upgrade pip
-#      - python -m pip install poetry maturin coverage codecov
-#      - python -m poetry install
-      - python -m pip install coverage codecov maturin poetry
-      - python -m poetry install
+      - pip install --upgrade pip
+      - pip install coverage codecov maturin
+      - maturin develop # Build and install Rust extensions
       #- python -m unittest discover -s test/ -p "test_*.py"
 #      - py.test --cov-report html --cov=src -v
-      - python -m coverage run -m pytest -s test/
-      - python -m coverage xml
+      - coverage run -m pytest -s test/
+      - coverage xml
       - codecov -t "$CODECOV_TOKEN" --commit="$DRONE_COMMIT_SHA"
     when:
       ref:
