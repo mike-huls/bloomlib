@@ -12,7 +12,11 @@ steps:
         from_secret: CODECOV_TOKEN
     commands:
       - apt-get update
-      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustup
+      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential
+
+      # install rustup (contains rustc and cargo)
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - . "$HOME/.cargo/env"
 
       # Create and activate venv; install dependencies
       - python -m venv .venv
@@ -48,7 +52,11 @@ steps:
         from_secret: PUBLIC_PYPI_TOKEN
     commands:
       - apt-get update
-      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustup
+      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential
+
+      # install rustup (contains rustc and cargo)
+      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - . "$HOME/.cargo/env"
 
       # Create and activate venv; install dependencies
       - python -m venv .venv
