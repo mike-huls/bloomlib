@@ -16,7 +16,7 @@ steps:
 
       # Create and activate venv; install dependencies
       - python -m venv .venv
-      - source .venv/bin/activate
+      - . .venv/bin/activate
       - pip install --upgrade pip
       - pip install coverage codecov maturin
 
