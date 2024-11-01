@@ -1,6 +1,6 @@
 [project]
 name = "bloomlib"
-version = "0.0.2"
+version = "0.0.3"
 requires-python = ">=3.9"
 description = "Library that offers all types of Bloom filters, implemented in Rust"
 authors = [
