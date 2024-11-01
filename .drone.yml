@@ -1,6 +1,6 @@
 kind: pipeline
 type: docker
-name: Publish Cachr
+name: Publish Bloomlib
 
 
 steps:
@@ -22,7 +22,7 @@ steps:
       - python -m venv .venv
       - . .venv/bin/activate
       - pip install --upgrade pip
-      - pip install coverage codecov maturin
+      - pip install coverage codecov maturin pytest
 
       # Install rustc alternative
 #      - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
