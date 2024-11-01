@@ -1,0 +1,10 @@
+[run]
+omit =
+    path/to/i_*.py
+    test/*
+
+[report]
+exclude_lines =
+    # Have to exclude this because it is non-testable
+    if __name__ == '__main__':
+    pragma: no cover

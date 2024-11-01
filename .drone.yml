@@ -16,7 +16,7 @@ steps:
       - python -m pip install --upgrade pip
 #      - python -m pip install poetry maturin coverage codecov
 #      - python -m poetry install
-      - python -m pip install maturin coverage codecov
+      - python -m pip install coverage codecov maturin poetry
       - python -m poetry install
       #- python -m unittest discover -s test/ -p "test_*.py"
 #      - py.test --cov-report html --cov=src -v
