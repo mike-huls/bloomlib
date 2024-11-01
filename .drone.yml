@@ -13,6 +13,10 @@ steps:
     commands:
       - apt-get update
       - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustc
+
+      # Create and activate venv; install dependencies
+      - python -m venv .venv
+      - source .venv/bin/activate
       - pip install --upgrade pip
       - pip install coverage codecov maturin
 
@@ -44,13 +48,14 @@ steps:
         from_secret: PUBLIC_PYPI_TOKEN
     commands:
       - apt-get update
-      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential
-      - python -m pip install --upgrade pip
-      - python -m pip install maturin
-      - python -m maturin build --release
-      - python -m maturin publish
-      - python -m poetry config pypi-token.pypi "$PUBLIC_PYPI_TOKEN"
-      - python -m poetry publish
+      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustc
+      -
+      - pip install --upgrade pip
+      - pip install maturin
+      - maturin develop # Build and install Rust extensions
+      - maturin build --release
+      - export MATURIN_PYPI_TOKEN="$PUBLIC_PYPI_TOKEN"
+      - maturin publish
     when:
       ref:
         include:
