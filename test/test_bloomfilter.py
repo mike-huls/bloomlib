@@ -37,6 +37,10 @@ def test_can_add_all_types():
         def __init__(self, name:str):
             self.name = name
 
+    @dataclasses.dataclass
+    class PersonDataclass:
+        name:str
+
     _string = "string"
     _float = 0.004
     _int = 6546
@@ -45,6 +49,7 @@ def test_can_add_all_types():
     _datetime = datetime.datetime.now()
     _time = datetime.time()
     _class_instance = Person(name="mike")
+    _dataclass_instance = PersonDataclass(name="mike")
 
     bloom.add(_string)
     assert bloom.contains(item=_string)
@@ -70,6 +75,10 @@ def test_can_add_all_types():
     bloom.add(_class_instance)
     assert bloom.contains(item=_class_instance)
     assert not bloom.contains(item=Person(name="other"))
+
+    # bloom.add(_dataclass_instance)
+    # assert bloom.contains(item=_dataclass_instance)
+    # assert not bloom.contains(item=PersonDataclass(name="other"))
 
 
 def test_can_calculate_estimated_fp_rate():
