@@ -12,7 +12,7 @@ steps:
         from_secret: CODECOV_TOKEN
     commands:
       - apt-get update
-      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustc
+      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustup
 
       # Create and activate venv; install dependencies
       - python -m venv .venv
@@ -48,7 +48,7 @@ steps:
         from_secret: PUBLIC_PYPI_TOKEN
     commands:
       - apt-get update
-      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustc
+      - apt-get install -y --no-install-recommends libpq-dev gcc python3-dev build-essential rustup
 
       # Create and activate venv; install dependencies
       - python -m venv .venv
