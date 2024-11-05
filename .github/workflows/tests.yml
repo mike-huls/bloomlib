@@ -32,6 +32,8 @@ jobs:
       - name: install, test coverage, codecov
         run: |
           source .venv/bin/activate
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src  # Adds the src folder to Python path
+
           maturin develop
           python -c "from bloomlib import BloomFilter; print('BloomFilter imported successfully')"
           python -m coverage run --source=bloomlib -m pytest -s test/
