@@ -1,85 +1,149 @@
-name: Release
+name: CI
 
 on:
   push:
     tags:
       - "production-*"
 
+permissions:
+  contents: read
+
 jobs:
-  unittest:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+          manylinux: auto
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
+      - name: pytest
+        if: ${{ startsWith(matrix.target, 'x86_64') }}
+        shell: bash
+        run: |
+          set -e
+          pip install bloomlib --find-links dist --force-reinstall
+          pip install pytest
+          pytest
+      - name: pytest
+        if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
+        uses: uraimo/run-on-arch-action@v2.5.0
+        with:
+          arch: ${{ matrix.target }}
+          distro: ubuntu22.04
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y --no-install-recommends python3 python3-pip
+            pip3 install -U pip pytest
+          run: |
+            set -e
+            pip3 install bloomlib --find-links dist --force-reinstall
+            pytest
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x64, x86]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          architecture: ${{ matrix.target }}
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
+      - name: pytest
+        if: ${{ !startsWith(matrix.target, 'aarch64') }}
+        shell: bash
+        run: |
+          set -e
+          pip install bloomlib --find-links dist --force-reinstall
+          pip install pytest
+          pytest
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
+      - name: pytest
+        if: ${{ !startsWith(matrix.target, 'aarch64') }}
+        shell: bash
+        run: |
+          set -e
+          pip install bloomlib --find-links dist --force-reinstall
+          pip install pytest
+          pytest
+
+  sdist:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
 
-    - name: Set up python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install codecov maturin pytest
-        uv sync
-
-    - name: Build Rust extension with Maturin
-      run: |
-        maturin develop
-
-    - name: Build unit tests
-      run: |
-        coverage run --source=bloomlib -m pytest -s test/
-
-    - name: Create coverage
-      run: |
-        uv run coverage report
-        uv run coverage xml
-
-    - name: Push coverage to codecov
-      run: |
-        codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
-
-
-
-  build_and_publish:
-    needs: unittest
+  release:
+    name: Release
     runs-on: ubuntu-latest
+    if: "startsWith(github.ref, 'refs/tags/')"
+    needs: [linux, windows, macos, sdist]
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install uv
-        uv sync
-
-    - name: Build package
-      run: |
-        uv build
-
-    - name: Publish package
-      run: |
-        uv publish -t "${{ secrets.PYPI_TOKEN }}"
-
-
-#  github_release:
-#    name: Create GitHub Release
-#    needs: build_and_publish
-#    runs-on: ubuntu-latest
-#    permissions:
-#      contents: write
-#    steps:
-#      - name: Checkout Code
-#        uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0 # Fetch full history to avoid issues with tags and branches
-#
-#      - name: Download artifacts
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: dist
-#          path: dist/
+      - uses: actions/download-artifact@v3
+        with:
+          name: wheels
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          command: upload
+          args: --non-interactive --skip-existing *

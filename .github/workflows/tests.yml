@@ -1,64 +1,54 @@
-name: Tests
+name: CI
 
 on:
   push:
     tags:
       - "test-*"
-  schedule:
-    # cron every week on monday
-    - cron: "0 0 * * 1"
+
+permissions:
+  contents: read
 
 jobs:
-  unittest:
+  linux:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Set up python 3.9
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          python-version: 3.9
-
-      - name: Set up virtual environment
+          python-version: '3.9'
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+          sccache: 'true'
+          manylinux: auto
+      - name: pytest
+        if: ${{ startsWith(matrix.target, 'x86_64') }}
+        shell: bash
         run: |
-          python -m venv .venv
-
-      - name: Install dependencies
-        run: |
-          source .venv/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install codecov maturin pytest
-
-      - name: install, test coverage, codecov
-        run: |
-          source .venv/bin/activate
-          export PYTHONPATH=$PYTHONPATH:$(pwd)/src  # Adds the src folder to Python path
-
-          maturin develop
-          python -c "from bloomlib import BloomFilter; print('BloomFilter imported successfully')"
-          python -m coverage run --source=bloomlib -m pytest -s test/
-          python -m coverage report
-          python -m coverage xml
-          python -m codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
-
-#      - name: Verify BloomFilter Import
-#        run: |
-#          source .venv/bin/activate
-#          python -c "from bloomlib import BloomFilter; print('BloomFilter imported successfully')"
-#
-#      - name: Run unit tests
-#        run: |
-#          source .venv/bin/activate
-#          python -m coverage run --source=bloomlib -m pytest -s test/
-#        working-directory: ${{ github.workspace }}
-#
-#      - name: Create coverage
-#        run: |
-#          source .venv/bin/activate
-#          python -m coverage report
-#          python -m coverage xml
-#
-#      - name: Push coverage to codecov
-#        run: |
-#          source .venv/bin/activate
-#          python -m codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
+          set -e
+          pip install bloomlib --find-links dist --force-reinstall
+          pip install coverage codecov pytest
+          coverage run --source=bloomlib -m pytest -s test/
+          coverage report
+          coverage xml
+          codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
+#      - name: pytest
+#        if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
+#        uses: uraimo/run-on-arch-action@v2.5.0
+#        with:
+#          arch: ${{ matrix.target }}
+#          distro: ubuntu22.04
+#          githubToken: ${{ github.token }}
+#          install: |
+#            apt-get update
+#            apt-get install -y --no-install-recommends python3 python3-pip
+#            pip3 install -U pip pytest
+#          run: |
+#            set -e
+#            pip3 install bloomlib --find-links dist --force-reinstall
+#            pytest

@@ -1,0 +1,64 @@
+name: Tests
+
+on:
+  push:
+    tags:
+      - "test-*"
+  schedule:
+    # cron every week on monday
+    - cron: "0 0 * * 1"
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Set up virtual environment
+        run: |
+          python -m venv .venv
+
+      - name: Install dependencies
+        run: |
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install codecov maturin pytest
+
+      - name: install, test coverage, codecov
+        run: |
+          source .venv/bin/activate
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/src  # Adds the src folder to Python path
+
+          maturin develop
+          python -c "from bloomlib import BloomFilter; print('BloomFilter imported successfully')"
+          python -m coverage run --source=bloomlib -m pytest -s test/
+          python -m coverage report
+          python -m coverage xml
+          python -m codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
+
+#      - name: Verify BloomFilter Import
+#        run: |
+#          source .venv/bin/activate
+#          python -c "from bloomlib import BloomFilter; print('BloomFilter imported successfully')"
+#
+#      - name: Run unit tests
+#        run: |
+#          source .venv/bin/activate
+#          python -m coverage run --source=bloomlib -m pytest -s test/
+#        working-directory: ${{ github.workspace }}
+#
+#      - name: Create coverage
+#        run: |
+#          source .venv/bin/activate
+#          python -m coverage report
+#          python -m coverage xml
+#
+#      - name: Push coverage to codecov
+#        run: |
+#          source .venv/bin/activate
+#          python -m codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
