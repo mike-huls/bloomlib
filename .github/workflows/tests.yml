@@ -29,30 +29,34 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install codecov maturin pytest
 
-      - name: Build Rust extension with Maturin
+      - name: install, test coverage, codecov
         run: |
           source .venv/bin/activate
           maturin develop
-        working-directory: ${{ github.workspace }}
-
-      - name: Verify BloomFilter Import
-        run: |
-          source .venv/bin/activate
           python -c "from bloomlib import BloomFilter; print('BloomFilter imported successfully')"
-
-      - name: Run unit tests
-        run: |
-          source .venv/bin/activate
           python -m coverage run --source=bloomlib -m pytest -s test/
-        working-directory: ${{ github.workspace }}
-
-      - name: Create coverage
-        run: |
-          source .venv/bin/activate
           python -m coverage report
           python -m coverage xml
-
-      - name: Push coverage to codecov
-        run: |
-          source .venv/bin/activate
           python -m codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
+
+#      - name: Verify BloomFilter Import
+#        run: |
+#          source .venv/bin/activate
+#          python -c "from bloomlib import BloomFilter; print('BloomFilter imported successfully')"
+#
+#      - name: Run unit tests
+#        run: |
+#          source .venv/bin/activate
+#          python -m coverage run --source=bloomlib -m pytest -s test/
+#        working-directory: ${{ github.workspace }}
+#
+#      - name: Create coverage
+#        run: |
+#          source .venv/bin/activate
+#          python -m coverage report
+#          python -m coverage xml
+#
+#      - name: Push coverage to codecov
+#        run: |
+#          source .venv/bin/activate
+#          python -m codecov -t "${{ secrets.CODECOV_TOKEN }}" --commit="${GITHUB_SHA}" --branch="master"
