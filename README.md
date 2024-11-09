@@ -13,12 +13,14 @@ _  /_/ /_  /  / /_/ // /_/ /_  / / / / /_  /  _  /  _  /_/ /
 
 # bloomlib: superfast Bloom filters for Python, optimized in Rust
 
-|         |                                                                                                                                                                                                                                                                                                                                                               |
-|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Testing | ![coverage](https://img.shields.io/codecov/c/github/mike-huls/bloomlib)                                                                                                                                                                                                                                                                                       |
-| Package | [![PyPI Latest Release](https://img.shields.io/pypi/v/bloomlib.svg)](https://pypi.org/project/bloomlib/) [![PyPI Downloads](https://img.shields.io/pypi/dm/bloomlib.svg?label=PyPI%20downloads)](https://pypistats.org/packages/bloomlib) <br/>![status](https://img.shields.io/pypi/status/bloomlib) ![dependencies](https://img.shields.io/librariesio/release/pypi/bloomlib) |
-| Meta    | ![GitHub License](https://img.shields.io/github/license/mike-huls/bloomlib) ![implementation](https://img.shields.io/pypi/implementation/bloomlib)  ![versions](https://img.shields.io/pypi/pyversions/bloomlib)                                                                                                                                                       |
-| Social  | ![tweet](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fmike-huls%2Fbloomlib) ![xfollow](https://img.shields.io/twitter/follow/mike_huls?style=social)                                                                                                                                                                           | 
+[![coverage](https://img.shields.io/codecov/c/github/mike-huls/bloomlib)](https://codecov.io/gh/mike-huls/bloomlib)
+[![version](https://img.shields.io/pypi/v/bloomlib?color=%2334D058&label=pypi%20package)](https://pypi.org/project/bloomlib)
+[![dependencies](https://img.shields.io/librariesio/release/pypi/bloomlib)](https://pypi.org/project/bloomlib)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/bloomlib.svg?label=PyPI%20downloads)](https://pypistats.org/packages/bloomlib)
+[![versions](https://img.shields.io/pypi/pyversions/bloomlib.svg?color=%2334D058)](https://pypi.org/project/bloomlib)
+<br>
+[![tweet](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fmike-huls%2Fbloomlib)](https://twitter.com/intent/tweet?text=Check%20this%20out:&url=https%3A%2F%2Fgithub.com%2Fmike-huls%2Fbloomlib) 
+[![xfollow](https://img.shields.io/twitter/follow/mike_huls)](https://twitter.com/intent/follow?screen_name=mike_huls)
 
 **bloomlib** is a Python package that provides superfast Bloom filters, designed to 
 optimize your applications in an easy and intuitive way.
